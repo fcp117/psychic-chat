@@ -70,7 +70,7 @@ onMounted(() => {
 
     // Listen to the private chat channel
     window.Echo.private(`chat.${props.session.id}`)
-        .listen('MessageSent', (e) => {
+        .listen('.MessageSent', (e) => {
             messages.value.push(e.message);
             scrollToBottom();
         });
