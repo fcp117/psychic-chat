@@ -71,8 +71,13 @@ onMounted(() => {
     // Listen to the private chat channel
     window.Echo.private(`chat.${props.session.id}`)
         .listen('.MessageSent', (e) => {
-            messages.value.push(e.message);
-            scrollToBottom();
+            
+            const isDuplicate = messages.value.some(msg => msg.id === e.message.id);
+            
+            if (!isDuplicate) {
+                messages.value.push(e.message);
+                scrollToBottom();
+            }
         });
 });
 
@@ -90,11 +95,18 @@ const sendMessage = async () => {
     try {
         const response = await axios.post(`/chat/${props.session.id}/message`, {
             content: content
+        }, {
+            headers: {
+                'X-Socket-ID':window.Echo.socketId()
+            }
         });
         
         // Add our own message to the screen (Echo's toOthers() prevents duplicates)
-        messages.value.push(response.data.message);
-        scrollToBottom();
+        const isDuplicate = messages.value.some(msg => msg.id === response.data.message.id);    
+        if (!isDuplicate) {
+            messages.value.push(response.data.message);
+            scrollToBottom();
+        }    
     } catch (error) {
         console.error("Failed to send message", error);
         newMessage.value = content; // Restore the text if it failed
