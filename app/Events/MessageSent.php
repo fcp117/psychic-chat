@@ -27,7 +27,7 @@ class MessageSent implements ShouldBroadcastNow
     {
         // Broadcast specifically to this chat session's room
         return [
-            new PrivateChannel('chat.' . $this->message->chat_session_id),
+            new PrivateChannel('chat.' . \App\Models\ChatSession::findOrFail($this->message->chat_session_id)->conversationId()),
         ];
     }
 

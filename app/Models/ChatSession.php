@@ -16,7 +16,17 @@ class ChatSession extends Model
     protected $casts = [
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
+        'agreed_at' => 'datetime', 'client_seen_at' => 'datetime', 'counselor_seen_at' => 'datetime',
+        'agreed_rate' => 'integer', 'billed_units' => 'integer', 'billed_seconds' => 'integer',
     ];
+
+    public function conversationQuery() {
+        return static::where('client_id',$this->client_id)->where('counselor_id',$this->counselor_id);
+    }
+    public function conversationId(): int { return (int) $this->conversationQuery()->min('id'); }
+    public function conversationMessages() {
+        return Message::whereIn('chat_session_id',$this->conversationQuery()->select('id'));
+    }
 
     public function client()
     {

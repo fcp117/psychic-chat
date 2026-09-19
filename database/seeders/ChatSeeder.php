@@ -18,7 +18,7 @@ class ChatSeeder extends Seeder
     public function run(): void
     {
         // 1. Fetch the users you already seeded
-        $client = User::where('role', 'client')->first();
+        $client = User::where('role', 'user')->first();
         $counselor = User::where('role', 'counselor')->first();
 
         // Safety check just in case the database is empty
@@ -27,13 +27,14 @@ class ChatSeeder extends Seeder
             return;
         }
 
-        // 2. Create an active chat session
+        // 2. Create completed, unbilled demo history
         $session = ChatSession::create([
             'client_id' => $client->id,
             'counselor_id' => $counselor->id,
-            'status' => 'active', 
+            'status' => 'completed', 
             'started_at' => Carbon::now()->subMinutes(5),
-            'ended_at' => null,
+            'ended_at' => Carbon::now(),
+            'end_reason' => 'legacy_unbilled',
         ]);
 
         // 3. Populate the room with some initial messages

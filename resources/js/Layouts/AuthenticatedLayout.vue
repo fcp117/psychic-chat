@@ -1,48 +1,55 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+
+const page = usePage();
+const navigation = computed(() => [
+    { label: 'Home', route: 'home', match: 'home' },
+    { label: 'Chat', route: 'chat.index', match: 'chat.*' },
+    { label: 'Forecast', route: 'forecast', match: 'forecast' },
+    { label: 'Credits', route: 'credits', match: 'credits' },
+    ...(page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings', match: 'earnings' }] : []),
+    ...(page.props.auth.user.role === 'admin' ? [{ label: 'Admin Settings', route: 'admin.settings', match: 'admin.*' }] : []),
+]);
 
 const showingNavigationDropdown = ref(false);
 </script>
 
 <template>
     <div>
-        <div class="min-h-screen bg-gray-100">
+        <div class="min-h-screen bg-page ">
             <nav
-                class="border-b border-gray-100 bg-white"
+                class="border-b border-border bg-surface "
             >
                 <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="mx-auto max-w-7xl px-4 lg:px-6 lg:px-8">
                     <div class="flex h-16 justify-between">
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
+                                <Link :href="route('home')" class="flex items-center gap-2" aria-label="Psychic Chat home">
                                     <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
+                                        class="block h-8 w-8 text-primary"
                                     />
+                                    <span class="font-serif text-lg tracking-wide text-content">Psychic Chat</span>
                                 </Link>
                             </div>
 
                             <!-- Navigation Links -->
                             <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
+                                class="hidden space-x-5 lg:-my-px lg:ms-6 lg:flex"
                             >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
+                                <NavLink v-for="item in navigation" :key="item.route" :href="route(item.route)" :active="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*'))">{{ item.label }}</NavLink>
                             </div>
                         </div>
 
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
+                        <div class="hidden lg:ms-6 lg:flex lg:items-center">
                             <!-- Settings Dropdown -->
                             <div class="relative ms-3">
                                 <Dropdown align="right" width="48">
@@ -50,7 +57,7 @@ const showingNavigationDropdown = ref(false);
                                         <span class="inline-flex rounded-md">
                                             <button
                                                 type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
+                                                class="inline-flex items-center rounded-md border border-transparent bg-surface px-3 py-2 text-sm font-medium leading-4 text-muted transition duration-150 ease-in-out hover:text-content focus:outline-none"
                                             >
                                                 {{ $page.props.auth.user.name }}
 
@@ -83,19 +90,20 @@ const showingNavigationDropdown = ref(false);
                                         >
                                             Log Out
                                         </DropdownLink>
+                                        <ThemeSwitcher />
                                     </template>
                                 </Dropdown>
                             </div>
                         </div>
 
                         <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button
+                        <div class="-me-2 flex items-center lg:hidden">
+                            <button type="button" aria-label="Toggle navigation" :aria-expanded="showingNavigationDropdown"
                                 @click="
                                     showingNavigationDropdown =
                                         !showingNavigationDropdown
                                 "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
+                                class="inline-flex items-center justify-center rounded-md p-2 text-muted transition duration-150 ease-in-out hover:bg-surface-hover hover:text-muted focus:bg-surface-hover focus:text-muted focus:outline-none"
                             >
                                 <svg
                                     class="h-6 w-6"
@@ -137,28 +145,23 @@ const showingNavigationDropdown = ref(false);
                         block: showingNavigationDropdown,
                         hidden: !showingNavigationDropdown,
                     }"
-                    class="sm:hidden"
+                    class="lg:hidden"
                 >
                     <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
+                        <ResponsiveNavLink v-for="item in navigation" :key="item.route" :href="route(item.route)" :active="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*'))">{{ item.label }}</ResponsiveNavLink>
                     </div>
 
                     <!-- Responsive Settings Options -->
                     <div
-                        class="border-t border-gray-200 pb-1 pt-4"
+                        class="border-t border-border pb-1 pt-4"
                     >
                         <div class="px-4">
                             <div
-                                class="text-base font-medium text-gray-800"
+                                class="text-base font-medium text-content "
                             >
                                 {{ $page.props.auth.user.name }}
                             </div>
-                            <div class="text-sm font-medium text-gray-500">
+                            <div class="text-sm font-medium text-muted ">
                                 {{ $page.props.auth.user.email }}
                             </div>
                         </div>
@@ -174,6 +177,7 @@ const showingNavigationDropdown = ref(false);
                             >
                                 Log Out
                             </ResponsiveNavLink>
+                            <ThemeSwitcher />
                         </div>
                     </div>
                 </div>
@@ -181,10 +185,10 @@ const showingNavigationDropdown = ref(false);
 
             <!-- Page Heading -->
             <header
-                class="bg-white shadow"
+                class="bg-surface shadow"
                 v-if="$slots.header"
             >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                <div class="mx-auto max-w-7xl px-4 py-6 lg:px-6 lg:px-8">
                     <slot name="header" />
                 </div>
             </header>

@@ -1,3 +1,69 @@
+/* EDIT THESE COLORS to customize the website. Keep text/background pairs readable. */
+:root {
+    /* Light theme */
+    --color-page: #F7F5FC;
+    --color-surface: #FFFFFF;
+    --color-surface-hover: #EFE9F8;
+    --color-text: #281C3C;
+    --color-muted: #6B5B7B;
+    --color-primary: #7C3AED;
+    --color-primary-hover: #6D28D9;
+    --color-on-primary: #FFFFFF;
+    --color-accent-soft: #EDE5FC;
+    --color-accent-text: #5B21B6;
+    --color-border: #E5DDF0;
+    --color-overlay: #151020;
+    --color-danger: #B91C1C;
+    --color-danger-hover: #991B1B;
+    --color-on-danger: #FFFFFF;
+    --color-error: #B91C1C;
+    --color-success: #15803D;
+}
+
+.dark {
+    /* Dark theme: the same roles, with a different palette. */
+    --color-page: #151020;
+    --color-surface: #231A33;
+    --color-surface-hover: #302440;
+    --color-text: #F5F0FC;
+    --color-muted: #BBAECC;
+    --color-primary: #A78BFA;
+    --color-primary-hover: #C4B5FD;
+    --color-on-primary: #151020;
+    --color-accent-soft: #382653;
+    --color-accent-text: #D8C5FF;
+    --color-border: #40324F;
+    --color-overlay: #08050D;
+    --color-danger: #B91C1C;
+    --color-danger-hover: #991B1B;
+    --color-on-danger: #FFFFFF;
+    --color-error: #FCA5A5;
+    --color-success: #86EFAC;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body { @apply bg-page text-content; }
+    input::placeholder, textarea::placeholder { color: var(--color-muted); }
+}
+
+/* Responsive portrait framing; adjust the focal point to reposition the subject. */
+.psychic-hero { --hero-focus: 70%; background-image: url('/images/psychic-light.png'); background-size: cover; background-repeat: no-repeat; background-position: var(--hero-focus) center; }
+.dark .psychic-hero { background-image: url('/images/psychic-dark.png'); }
+.hero-content { min-height: clamp(30rem, calc(100svh - 5rem), 52rem); }
+.hero-title { font-size: clamp(2.4rem, 5.5vw, 4.5rem); }
+.hero-shade { background: linear-gradient(90deg, color-mix(in srgb, var(--color-page) 85%, transparent), transparent 80%); }
+@media (max-width: 767px) {
+    .psychic-hero { --hero-focus: 72%; }
+    .hero-content { min-height: min(46rem, calc(100svh - 4rem)); }
+    .hero-shade { background: linear-gradient(90deg, color-mix(in srgb, var(--color-page) 96%, transparent), color-mix(in srgb, var(--color-page) 75%, transparent) 60%, color-mix(in srgb, var(--color-page) 35%, transparent)); }
+}
+@media (max-height: 500px) and (orientation: landscape) { .hero-content { min-height: 25rem; padding-block: 2rem; } }
+
+@layer components {
+    .field { @apply rounded-lg border-border bg-surface text-content shadow-sm focus:border-primary focus:ring-primary; }
+    .action { @apply rounded-full bg-primary px-6 py-3 text-sm font-semibold text-on-primary hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50; }
+}

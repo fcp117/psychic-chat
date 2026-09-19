@@ -18,9 +18,9 @@ class UserSeeder extends Seeder
             'name' => 'John Doe (Client)',
             'email' => 'client@example.com',
             'password' => Hash::make('password'),
-            'role' => 'client',
-            'available_credits' => 5000, // e.g., 5,000 tokens or $50.00
-            'rate_per_minute' => null,
+            'role' => 'user',
+            'available_credits' => 5000, // Demo credits; no cash conversion.
+            'rate_per_hour' => null,
         ]);
 
         // 2. Create Counselor A
@@ -30,7 +30,8 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'role' => 'counselor',
             'available_credits' => 0,
-            'rate_per_minute' => 150, // e.g., 150 tokens or $1.50 per minute
+            'rate_per_hour' => 60,
+            'is_approved' => true,
         ]);
 
         // 3. Create Counselor B
@@ -40,7 +41,8 @@ class UserSeeder extends Seeder
             'password' => Hash::make('password'),
             'role' => 'counselor',
             'available_credits' => 0,
-            'rate_per_minute' => 250, 
+            'rate_per_hour' => 120,
+            'is_approved' => true, 
         ]);
     }
 }

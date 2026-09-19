@@ -50,6 +50,9 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+        if ($user->role === 'admin' || \App\Models\CreditPurchase::where('user_id',$user->id)->exists() || \App\Models\ChatSession::where(fn($q) => $q->where('client_id',$user->id)->orWhere('counselor_id',$user->id))->exists() || \Illuminate\Support\Facades\DB::table('credit_transactions')->where('user_id', $user->id)->where('kind', '!=', 'opening')->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['password' => 'Contact an administrator to close accounts with administrative access or credit transactions.']);
+        }
 
         Auth::logout();
 
