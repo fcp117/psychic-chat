@@ -31,22 +31,28 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['email'=>strtolower(trim((string) $request->email)), 'username'=>strtolower(trim((string) $request->username))]);
         $request->validate([
             'name' => 'required|string|max:255',
+            'username' => ['required','string','min:3','max:40','regex:/^[a-z0-9_]+$/','unique:users,username'],
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $request->name,
+            'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
 
-        event(new Registered($user));
+
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        $request->session()->regenerate();
+        try { event(new Registered($user)); }
+        catch (ValidationException $e) { return redirect()->route('verification.notice')->withErrors($e->errors()); }
+        return redirect()->route('verification.notice')->with('status','verification-code-sent');
     }
 }

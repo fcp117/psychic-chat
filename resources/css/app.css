@@ -67,3 +67,22 @@
     .field { @apply rounded-lg border-border bg-surface text-content shadow-sm focus:border-primary focus:ring-primary; }
     .action { @apply rounded-full bg-primary px-6 py-3 text-sm font-semibold text-on-primary hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50; }
 }
+
+/* Shared interior-page treatment; theme colors remain configurable above. */
+.app-shell {
+    background-image: radial-gradient(ellipse at 95% 0%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 42%), radial-gradient(ellipse at 0% 55%, color-mix(in srgb, var(--color-accent-soft) 65%, transparent), transparent 50%);
+}
+.app-content { min-width: 0; }
+.app-content article, .app-content section.rounded-2xl {
+    box-shadow: 0 6px 24px color-mix(in srgb, var(--color-overlay) 4%, transparent);
+}
+.app-content h1 { text-wrap: balance; }
+.app-content :is(input, select, textarea) { max-width: 100%; }
+.app-content :is(a, button):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+}
+@media (max-width: 639px) {
+    .app-content h1 { font-size: clamp(1.9rem, 8vw, 2.5rem); }
+    .app-content article { overflow-wrap: anywhere; }
+}

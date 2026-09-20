@@ -37,6 +37,11 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
+        if (!$request->user()->hasVerifiedEmail()) {
+            try { $request->user()->sendEmailVerificationNotification(); }
+            catch (\Illuminate\Validation\ValidationException $e) { return redirect()->route('verification.notice')->withErrors($e->errors()); }
+            return redirect()->route('verification.notice')->with('status','verification-code-sent');
+        }
         return Redirect::route('profile.edit');
     }
 

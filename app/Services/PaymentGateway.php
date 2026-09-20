@@ -9,13 +9,14 @@ class PaymentGateway {
     private const PAYPAL='https://api-m.sandbox.paypal.com';
     private const MAYA='https://pg-sandbox.paymaya.com';
     public function methods(): array {
-        return collect(['paypal'=>'PayPal','stripe'=>'Stripe','maya'=>'Maya (PayMaya)'])->map(fn($name,$id)=>[
+        return collect(['paypal'=>'PayPal','stripe'=>'Stripe','maya'=>'Maya (PayMaya)','gcash'=>'GCash'])->map(fn($name,$id)=>[
             'id'=>$id,'name'=>$name,'available'=>$this->ready($id),'minimum'=>max(100,(int)config('payments.'.$id.'.minimum',100)),'mode'=>'sandbox',
         ])->values()->all();
     }
     public function ready(string $provider): bool {
         if(!config('payments.'.$provider.'.enabled')) return false;
         return match($provider) {
+            'gcash'=>app(GcashGateway::class)->ready(),
             'stripe'=>str_starts_with((string)config('payments.stripe.secret'),'sk_test_') && (bool)config('payments.stripe.webhook_secret'),
             'paypal'=>(bool)config('payments.paypal.client_id') && (bool)config('payments.paypal.secret') && (bool)config('payments.paypal.webhook_id'),
             'maya'=>(bool)config('payments.maya.public') && (bool)config('payments.maya.secret'),
@@ -31,6 +32,7 @@ class PaymentGateway {
     private function amount(int $centavos): string { return intdiv($centavos,100).'.'.str_pad((string)($centavos%100),2,'0',STR_PAD_LEFT); }
     public function create(CreditPurchase $order): array {
         if(!$this->ready($order->provider)) throw ValidationException::withMessages(['provider'=>'This payment method is not configured yet.']);
+        if($order->provider==='gcash') return app(GcashGateway::class)->create($order);
         $return=route('credits.purchase',$order->id);
         if($order->provider==='stripe') {
             $data=$this->http()->asForm()->withToken(config('payments.stripe.secret'))->withHeaders(['Idempotency-Key'=>$order->id])->post('https://api.stripe.com/v1/checkout/sessions',[
@@ -63,6 +65,7 @@ class PaymentGateway {
     // Verify through authenticated provider APIs. Neither return URLs nor webhook bodies grant credits.
     public function paid(CreditPurchase $order): bool {
         if($order->environment!=='sandbox' || !$this->ready($order->provider) || !$order->provider_id) return false;
+        if($order->provider==='gcash') return app(GcashGateway::class)->paid($order);
         $id=rawurlencode($order->provider_id);
         if($order->provider==='stripe') {
             $d=$this->http()->withToken(config('payments.stripe.secret'))->get('https://api.stripe.com/v1/checkout/sessions/'.$id)->throw()->json();
@@ -87,6 +90,7 @@ class PaymentGateway {
     }
     public function webhookOrder(Request $r,string $provider): ?string {
         abort_unless($this->ready($provider),503);
+        if($provider==='gcash') return app(GcashGateway::class)->webhookOrder($r);
         if($provider==='stripe') {
             $parts=explode(',',(string)$r->header('Stripe-Signature')); $time=null; $signatures=[];
             foreach($parts as $part) { [$key,$value]=array_pad(explode('=',$part,2),2,''); if($key==='t')$time=$value; if($key==='v1')$signatures[]=$value; }

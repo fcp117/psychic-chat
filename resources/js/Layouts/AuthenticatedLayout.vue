@@ -23,7 +23,7 @@ const showingNavigationDropdown = ref(false);
 
 <template>
     <div>
-        <div class="min-h-screen bg-page ">
+        <div class="app-shell min-h-screen bg-page">
             <nav
                 class="border-b border-border bg-surface "
             >
@@ -185,7 +185,7 @@ const showingNavigationDropdown = ref(false);
 
             <!-- Page Heading -->
             <header
-                class="bg-surface shadow"
+                class="border-b border-border bg-surface"
                 v-if="$slots.header"
             >
                 <div class="mx-auto max-w-7xl px-4 py-6 lg:px-6 lg:px-8">
@@ -194,7 +194,7 @@ const showingNavigationDropdown = ref(false);
             </header>
 
             <!-- Page Content -->
-            <main>
+            <main class="app-content">
                 <slot />
             </main>
         </div>

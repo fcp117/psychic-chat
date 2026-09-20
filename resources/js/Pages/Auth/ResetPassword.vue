@@ -1,10 +1,11 @@
 <script setup>
+import PasswordRequirements from '@/Components/PasswordRequirements.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     email: {
@@ -32,7 +33,7 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout title="A fresh start" description="Choose a new password to secure your Psychic Chat account.">
         <Head title="Reset Password" />
 
         <form @submit.prevent="submit">
@@ -57,6 +58,7 @@ const submit = () => {
 
                 <TextInput
                     id="password"
+                    aria-describedby="password-requirements"
                     type="password"
                     class="mt-1 block w-full"
                     v-model="form.password"
@@ -64,6 +66,7 @@ const submit = () => {
                     autocomplete="new-password"
                 />
 
+                <PasswordRequirements id="password-requirements" :password="form.password" />
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
@@ -88,14 +91,15 @@ const submit = () => {
                 />
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
-                <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
+            <div class="mt-6 flex">
+                <PrimaryButton class="w-full justify-center !rounded-full !py-3.5"
+                    :class="{ 'opacity-50': form.processing }"
                     :disabled="form.processing"
                 >
                     Reset Password
                 </PrimaryButton>
             </div>
         </form>
+        <p class="mt-6 border-t border-border pt-5 text-center text-sm"><Link :href="route('login')" class="text-accent-text underline underline-offset-4">Back to login</Link></p>
     </GuestLayout>
 </template>

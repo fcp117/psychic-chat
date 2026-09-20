@@ -17,6 +17,7 @@ try {
     $counselor=App\Models\User::forceCreate(['name'=>'Test counselor','email'=>'counselor@test.invalid','password'=>'test123456','role'=>'counselor','is_approved'=>true]);
     $admin=App\Models\User::forceCreate(['name'=>'Test admin','email'=>'admin@test.invalid','password'=>'test123456','role'=>'admin']);
     $other=App\Models\User::forceCreate(['name'=>'Other','email'=>'other@test.invalid','password'=>'test123456','role'=>'user']);
+    App\Models\User::query()->update(['email_verified_at'=>now()]);
     $billing=app(App\Services\ReadingBilling::class); $chat=app(App\Http\Controllers\ChatController::class); $manage=app(App\Http\Controllers\AdminController::class);
     Illuminate\Support\Carbon::setTestNow('2026-09-19 12:00:00');
     rejects(fn()=> $chat->start(requestAs($user,['accepted_rate'=>60,'consent'=>false]),$counselor),'server requires consent');

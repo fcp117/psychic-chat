@@ -4,14 +4,14 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Models\ChatSession;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    if ($user->is_suspended) return false;
+    if (!$user->hasVerifiedEmail() || $user->is_suspended) return false;
     return (int) $user->id === (int) $id;
 });
 
 Broadcast::channel('counselors.online', function ($user) {
     // Check if the user is authenticated. 
     // If they are, return the data you want the Vue frontend to see.
-    if ($user && !$user->is_suspended) {
+    if ($user && $user->hasVerifiedEmail() && !$user->is_suspended) {
         return [
             'id' => $user->id,
             'name' => $user->name,
@@ -25,7 +25,7 @@ Broadcast::channel('counselors.online', function ($user) {
 });
 
 Broadcast::channel('chat.{sessionId}', function ($user, $sessionId) {
-    if ($user->is_suspended) return false;
+    if (!$user->hasVerifiedEmail() || $user->is_suspended) return false;
     $session = ChatSession::find($sessionId);
     
     if (!$session) return false;

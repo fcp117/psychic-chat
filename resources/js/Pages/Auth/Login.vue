@@ -1,6 +1,6 @@
 <script setup>
 import Checkbox from '@/Components/Checkbox.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
+import LoginLayout from '@/Layouts/LoginLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -17,7 +17,7 @@ defineProps({
 });
 
 const form = useForm({
-    email: '',
+    login: '',
     password: '',
     remember: false,
 });
@@ -30,7 +30,7 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <LoginLayout>
         <Head title="Log in" />
 
         <div v-if="status" class="mb-4 text-sm font-medium text-success ">
@@ -39,19 +39,19 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="login" value="Username or email" />
 
                 <TextInput
-                    id="email"
-                    type="email"
+                    id="login"
+                    type="text"
                     class="mt-1 block w-full"
-                    v-model="form.email"
+                    v-model="form.login"
                     required
                     autofocus
                     autocomplete="username"
                 />
 
-                <InputError class="mt-2" :message="form.errors.email" />
+                <InputError class="mt-2" :message="form.errors.login" />
             </div>
 
             <div class="mt-4">
@@ -78,7 +78,7 @@ const submit = () => {
                 </label>
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
@@ -88,13 +88,13 @@ const submit = () => {
                 </Link>
 
                 <PrimaryButton
-                    class="ms-4"
+                    class="justify-center"
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
                     Log in
                 </PrimaryButton>
             </div>
-        </form>
-    </GuestLayout>
+        </form><p class="mt-6 text-center text-sm text-muted">New here? <Link :href="route('register')" class="font-semibold text-accent-text underline">Create an account</Link></p>
+    </LoginLayout>
 </template>

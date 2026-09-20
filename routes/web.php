@@ -7,13 +7,13 @@ use App\Http\Controllers\ChatController;
 
 Route::get('/', function () {
     return Inertia::render('Dashboard');
-})->middleware('auth')->name('home');
+})->middleware(['auth', 'verified'])->name('home');
 
 // Keep existing dashboard links and authentication redirects compatible.
 Route::get('/dashboard', fn () => redirect()->route('home'))
-    ->middleware('auth')->name('dashboard');
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/chat', function (\Illuminate\Http\Request $request) {
         app(\App\Services\ReadingBilling::class)->sweep();
         $sessions = \App\Models\ChatSession::query()
@@ -41,9 +41,9 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/demo', function() {
     return Inertia::render('PresenceChannelDemo');
-})->name('demo');
+})->middleware(['auth', 'verified'])->name('demo');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -60,7 +60,7 @@ Route::middleware('auth')->group(function () {
 
 });
 
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('settings');
     Route::patch('/credit-shop', [\App\Http\Controllers\AdminController::class,'shop'])->name('shop');
     Route::post('/credit-packages', [\App\Http\Controllers\AdminController::class,'package'])->name('package');
@@ -74,4 +74,4 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 require __DIR__.'/auth.php';
 
-Route::post('/payment-webhooks/{provider}', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->whereIn('provider',['stripe','paypal','maya'])->middleware('throttle:120,1')->name('payments.webhook');
+Route::post('/payment-webhooks/{provider}', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->whereIn('provider',['stripe','paypal','maya','gcash'])->middleware('throttle:120,1')->name('payments.webhook');

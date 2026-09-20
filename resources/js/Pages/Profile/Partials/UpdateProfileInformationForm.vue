@@ -34,6 +34,7 @@ const form = useForm({
             </p>
         </header>
 
+        <p class="mt-3 text-sm text-muted">Username: <span class="font-semibold text-content">{{ user.username }}</span></p>
         <form
             @submit.prevent="form.patch(route('profile.update'))"
             class="mt-6 space-y-6"
@@ -83,10 +84,10 @@ const form = useForm({
                 </p>
 
                 <div
-                    v-show="status === 'verification-link-sent'"
+                    v-show="status === 'verification-code-sent'"
                     class="mt-2 text-sm font-medium text-success "
                 >
-                    A new verification link has been sent to your email address.
+                    A new verification code has been sent to your email address.
                 </div>
             </div>
 

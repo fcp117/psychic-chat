@@ -23,7 +23,7 @@ class CreditPurchaseController extends Controller {
     }
     public function checkout(Request $r) {
         abort_unless($r->user()->role==='user',403);
-        $v=$r->validate(['package_id'=>'nullable|integer','credits'=>'nullable|integer|min:1|max:100000','provider'=>'required|in:paypal,stripe,maya','request_key'=>'required|uuid','expected_amount'=>'required|integer|min:100|max:10000000','expected_credits'=>'required|integer|min:1|max:100000']);
+        $v=$r->validate(['package_id'=>'nullable|integer','credits'=>'nullable|integer|min:1|max:100000','provider'=>'required|in:paypal,stripe,maya,gcash','request_key'=>'required|uuid','expected_amount'=>'required|integer|min:100|max:10000000','expected_credits'=>'required|integer|min:1|max:100000']);
         if(!$this->gateway->ready($v['provider'])) throw ValidationException::withMessages(['provider'=>'This payment method is not configured yet.']);
         [$order,$new]=DB::transaction(function() use($r,$v) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();

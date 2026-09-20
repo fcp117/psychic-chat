@@ -20,6 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Validation\Rules\Password::defaults(fn () =>
+            \Illuminate\Validation\Rules\Password::min(8)->rules([new \App\Rules\PasswordComposition])
+        );
         Vite::prefetch(concurrency: 3);
     }
 }

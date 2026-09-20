@@ -1,4 +1,5 @@
 <script setup>
+import PasswordRequirements from '@/Components/PasswordRequirements.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -70,6 +71,7 @@ const updatePassword = () => {
 
                 <TextInput
                     id="password"
+                    aria-describedby="password-requirements"
                     ref="passwordInput"
                     v-model="form.password"
                     type="password"
@@ -77,6 +79,7 @@ const updatePassword = () => {
                     autocomplete="new-password"
                 />
 
+                <PasswordRequirements id="password-requirements" :password="form.password" />
                 <InputError :message="form.errors.password" class="mt-2" />
             </div>
 

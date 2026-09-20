@@ -36,3 +36,17 @@ Official references:
 - https://developers.maya.ph/reference/createv1checkout
 - https://developers.maya.ph/reference/getpaymentviapaymentid-1
 - https://developers.maya.ph/reference/configuring-your-webhook-for-maya-checkout
+
+## GCash through PayMongo
+
+GCash appears as its own Credits payment option and in admin connection status. It uses PayMongo hosted checkout restricted to the gcash method, with no fee passed on to the customer. Existing Maya sandbox configuration is unchanged. Maya's shared sandbox does not support GCash testing.
+
+To connect, obtain your own PayMongo test secret (sk_test_...) and test webhook signing secret. Put them in PAYMONGO_TEST_SECRET and PAYMONGO_TEST_WEBHOOK_SECRET in .env, then set GCASH_ENABLED=true and run php artisan config:clear. Register the HTTPS endpoint /payment-webhooks/gcash for checkout_session.payment.paid in PayMongo test mode. Keep the scheduler running. The callback only schedules verification; the authenticated provider API must confirm the matching purchase, amount, PHP currency, GCash method and test mode before crediting.
+
+Default method minimum is PHP 1.00. PayMongo merchant eligibility and payment-method activation still apply. Shared Maya credentials cannot enable this integration. Never enter live wallet credentials in test checkout. No actual PayMongo end-to-end test has been performed without merchant test keys; regression tests use isolated databases and mocked responses.
+
+References:
+- https://docs.paymongo.com/docs/payment-channels-hosted-checkout
+- https://docs.paymongo.com/docs/payment-acceptance-testing
+- https://docs.paymongo.com/docs/developer-tools-webhook-setup-management
+- https://docs.paymongo.com/docs/account-settings-account-capabilities

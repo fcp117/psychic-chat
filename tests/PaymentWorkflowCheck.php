@@ -86,5 +86,40 @@ try {
     $req=Illuminate\Http\Request::create('/','POST',[],[],[],['REMOTE_ADDR'=>'127.0.0.1','CONTENT_TYPE'=>'application/json'],'{"paymentStatus":"PAYMENT_SUCCESS","id":"maya-fixture"}');
     rejected(fn()=>$gateway->webhookOrder($req,'maya'),'Maya webhook from untrusted IP rejected');
     foreach(['admin.shop','admin.package'] as $name)check(in_array('role:admin',app('router')->getRoutes()->getByName($name)->gatherMiddleware()),$name.' requires admin access');
+
+    config(['payments.gcash.enabled'=>false]);
+    check(!$gateway->ready('gcash') && collect($gateway->methods())->contains('id','gcash'),'GCash is listed but disabled without credentials');
+    config(['payments.gcash.enabled'=>true,'payments.gcash.secret'=>'sk_live_fixture','payments.gcash.webhook_secret'=>'gcash-signing']);
+    check(!$gateway->ready('gcash'),'GCash rejects live credentials');
+    config(['payments.gcash.secret'=>'sk_test_fixture']);
+    $g=App\Models\CreditPurchase::create(['id'=>(string)Illuminate\Support\Str::uuid(),'user_id'=>$user->id,'request_key'=>(string)Illuminate\Support\Str::uuid(),'label'=>'GCash test','credits'=>1,'amount'=>100,'currency'=>'PHP','provider'=>'gcash','environment'=>'sandbox','status'=>'pending']);
+    fakeHttp(function($r)use($g){check($r->url()==='https://api.paymongo.com/v2/checkout_sessions' && $r['data']['attributes']['payment_method_types']===['gcash'] && $r['data']['attributes']['line_items'][0]['amount']===100 && $r['data']['attributes']['pass_on_fees']===false,'GCash checkout uses centavos and no added customer fee');return Illuminate\Support\Facades\Http::response(['data'=>['id'=>'cs_gcash','attributes'=>['livemode'=>false,'checkout_url'=>'https://checkout.paymongo.com/cs_gcash']]]);});
+    $g->update($gateway->create($g));
+    $fixture=['data'=>['id'=>'cs_gcash','attributes'=>['livemode'=>false,'reference_number'=>$g->id,'metadata'=>['purchase_id'=>$g->id],'status'=>'active','line_items'=>[['amount'=>100,'quantity'=>1,'currency'=>'PHP']],'payments'=>[]]]];
+    fakeHttp(fn($r)=>Illuminate\Support\Facades\Http::response($fixture));
+    check(!$payments->sync($g),'unpaid GCash checkout adds no credits');
+    $fixture['data']['attributes']['payments']=[['attributes'=>['status'=>'paid','amount'=>100,'currency'=>'PHP','livemode'=>false,'source'=>['type'=>'gcash'],'refunds'=>[],'disputed'=>false]]];
+    $good=$fixture;
+    foreach(['amount'=>99,'currency'=>'USD','livemode'=>true,'source'=>['type'=>'card']] as $field=>$value) {
+        $fixture=$good;$fixture['data']['attributes']['payments'][0]['attributes'][$field]=$value;
+        fakeHttp(fn($r)=>Illuminate\Support\Facades\Http::response($fixture));
+        rejected(fn()=>$payments->sync($g),'GCash rejects mismatched payment '.$field);
+    }
+    $fixture=$good;$fixture['data']['attributes']['reference_number']='unrelated';
+    fakeHttp(fn($r)=>Illuminate\Support\Facades\Http::response($fixture));
+    rejected(fn()=>$payments->sync($g),'GCash rejects another purchase reference');
+    $fixture=$good;fakeHttp(fn($r)=>Illuminate\Support\Facades\Http::response($fixture));
+    $before=$user->fresh()->credit_units;
+    check($payments->sync($g),'verified GCash test payment adds credits');$payments->sync($g);
+    check($user->fresh()->credit_units===$before+3600 && Illuminate\Support\Facades\DB::table('credit_transactions')->where('purchase_id',$g->id)->count()===1,'GCash duplicate verification credits once');
+    foreach([['data'=>['attributes'=>['type'=>'checkout_session.payment.paid','livemode'=>false,'data'=>['id'=>'cs_gcash']]]],['data'=>['type'=>'checkout_session.payment.paid','livemode'=>false,'data'=>['id'=>'cs_gcash']]]] as $envelope) {
+        $body=json_encode($envelope);$req=Illuminate\Http\Request::create('/','POST',[],[],[],['CONTENT_TYPE'=>'application/json'],$body);
+        rejected(fn()=>$gateway->webhookOrder($req,'gcash'),'unsigned GCash callback rejected');
+        $time=time();$req->headers->set('Paymongo-Signature','t='.$time.',te='.hash_hmac('sha256',$time.'.'.$body,'gcash-signing').',li=');
+        check($gateway->webhookOrder($req,'gcash')==='cs_gcash','signed GCash test callback resolves checkout');
+        $req->headers->set('Paymongo-Signature','t='.$time.',te=bad,li=');
+        rejected(fn()=>$gateway->webhookOrder($req,'gcash'),'tampered GCash callback rejected');
+    }
+
     echo "ALL PAYMENT CHECKS PASSED (no network calls, no live data)\n";
 }finally{Illuminate\Support\Facades\DB::disconnect('sqlite');if(is_file($db))unlink($db);}

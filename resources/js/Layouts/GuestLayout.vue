@@ -1,22 +1,8 @@
 <script setup>
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import { Link } from '@inertiajs/vue3';
+import LoginLayout from '@/Layouts/LoginLayout.vue';
+defineProps({
+    title: { type: String, default: 'Welcome to Psychic Chat' },
+    description: { type: String, default: 'A space for reflection and connection.' },
+});
 </script>
-
-<template>
-    <div
-        class="flex min-h-screen flex-col items-center bg-page pt-6 sm:justify-center sm:pt-0"
-    >
-        <div>
-            <Link href="/">
-                <ApplicationLogo class="h-20 w-20 fill-current text-muted " />
-            </Link>
-        </div>
-
-        <div
-            class="mt-6 w-full overflow-hidden bg-surface px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg"
-        >
-            <slot />
-        </div>
-    </div>
-</template>
+<template><LoginLayout :title="title" :description="description"><slot /></LoginLayout></template>
