@@ -61,7 +61,9 @@ class ProfileController extends Controller
 
         Auth::logout();
 
+        $photo = $user->profile_photo_path;
         $user->delete();
+        if ($photo) \Illuminate\Support\Facades\Storage::disk('local')->delete($photo);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

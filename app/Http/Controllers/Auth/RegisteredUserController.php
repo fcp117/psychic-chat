@@ -21,7 +21,7 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', ['latestBirthdate'=>now('Asia/Manila')->subYears(18)->toDateString()]);
     }
 
     /**
@@ -34,13 +34,15 @@ class RegisteredUserController extends Controller
         $request->merge(['email'=>strtolower(trim((string) $request->email)), 'username'=>strtolower(trim((string) $request->username))]);
         $request->validate([
             'name' => 'required|string|max:255',
+            'birthdate' => ['required','date_format:Y-m-d','before_or_equal:'.now('Asia/Manila')->subYears(18)->toDateString()],
             'username' => ['required','string','min:3','max:40','regex:/^[a-z0-9_]+$/','unique:users,username'],
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        ], ['birthdate.before_or_equal'=>'You must be at least 18 years old to register.', 'birthdate.required'=>'Please enter your birthdate.']);
 
         $user = User::create([
             'name' => $request->name,
+            'birthdate' => $request->birthdate,
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),

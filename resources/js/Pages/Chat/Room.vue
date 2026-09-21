@@ -6,6 +6,10 @@ import axios from 'axios';
 const props = defineProps({ session: Object, conversationId: Number, initialMessages: Array, currentUser: Object });
 const session = ref(props.session), balance = ref(props.currentUser.available_credits);
 const messages = ref([...props.initialMessages]), newMessage = ref(''), sending = ref(false);
+const online=ref(navigator.onLine),connectedOnce=ref(false),socketState=ref('connecting');
+let lastAttempt=null;
+const socketChange=({current})=>socketState.value=current;
+const onlineChange=()=>{online.value=navigator.onLine;if(online.value)heartbeat();};
 const error = ref(''), connectionError = ref(false), container = ref(null), action = useForm({});
 const agreement = ref(null), showAgreement = ref(false), loadingAgreement = ref(false);
 const request = useForm({accepted_rate: 0, consent: true, hide_notice: false});
@@ -33,17 +37,20 @@ const heartbeat = async () => {
             active: !document.hidden && Date.now() - lastActivity < (session.value.disconnect_seconds || 30) * 1000,
             idle_seconds: Math.max(0, Math.floor((Date.now() - lastActivity) / 1000)),
         });
-        if (!stopped) { session.value = result.data.session; balance.value = result.data.balance; serverOffset = Date.parse(result.data.server_time)-Date.now(); connectionError.value = false; result.data.messages.forEach(append); }
+        if (!stopped) { session.value = result.data.session; balance.value = result.data.balance; serverOffset = Date.parse(result.data.server_time)-Date.now(); connectionError.value = false; connectedOnce.value=true; result.data.messages.forEach(append); }
     } catch { if (!stopped) connectionError.value = true; }
     finally { polling = false; }
 };
 onMounted(() => {
+    window.addEventListener('online',onlineChange);window.addEventListener('offline',onlineChange);
+    const connection=window.Echo?.connector?.pusher?.connection;socketState.value=connection?.state||'unavailable';connection?.bind('state_change',socketChange);
     scroll(); heartbeat(); timer = setInterval(heartbeat, 5000); clock = setInterval(() => { now.value = Date.now()+serverOffset; }, 1000);
     ['pointerdown','pointermove','keydown','touchstart','scroll'].forEach(event => window.addEventListener(event, markActivity, {passive:true,capture:true}));
     document.addEventListener('visibilitychange',visible);
     window.Echo?.private(`chat.${props.conversationId}`).listen('.MessageSent', event => append(event.message)).listen('.ReadingUpdated', heartbeat);
 });
 onUnmounted(() => {
+    window.removeEventListener('online',onlineChange);window.removeEventListener('offline',onlineChange);window.Echo?.connector?.pusher?.connection?.unbind('state_change',socketChange);
     stopped = true; clearInterval(timer); clearInterval(clock); window.Echo?.leave(`chat.${props.conversationId}`);
     ['pointerdown','pointermove','keydown','touchstart','scroll'].forEach(event => window.removeEventListener(event,markActivity,true));
     document.removeEventListener('visibilitychange',visible);
@@ -60,10 +67,12 @@ const continueChat = async () => {
 };
 const submitRequest = () => request.post(route('psychics.chat',session.value.counselor_id), {preserveScroll:true,onSuccess:() => { showAgreement.value=false; markActivity(); heartbeat(); }});
 const send = async () => {
-    if (sending.value || !newMessage.value.trim() || !live.value) return;
-    const content=newMessage.value; sending.value=true; error.value=''; markActivity();
-    try { const result=await axios.post(route('chat.message',session.value.id),{content},{headers:{'X-Socket-ID':window.Echo?.socketId() ?? ''}}); append(result.data.message); newMessage.value=''; }
-    catch(e) { error.value=e.response?.data?.errors?.reading?.[0] || e.response?.data?.message || 'Message could not be sent. Please retry.'; heartbeat(); }
+    if (sending.value || !newMessage.value.trim() || (!live.value && !lastAttempt)) return;
+    const content=newMessage.value;
+    if(!lastAttempt || lastAttempt.content!==content) lastAttempt={content,key:crypto.randomUUID(),sessionId:session.value.id};
+    const attempt=lastAttempt; sending.value=true; error.value=''; markActivity();
+    try { const result=await axios.post(route('chat.message',attempt.sessionId),{content,request_key:attempt.key},{headers:{'X-Socket-ID':window.Echo?.socketId() ?? ''}}); append(result.data.message); if(newMessage.value===content)newMessage.value='';lastAttempt=null; }
+    catch(e) { error.value=e.response?.data?.errors?.reading?.[0] || e.response?.data?.message || 'We could not confirm delivery. Your message is still here; retrying will not send it twice.'; heartbeat(); }
     finally { sending.value=false; }
 };
 </script>
@@ -77,7 +86,7 @@ const send = async () => {
             <p v-if="live" class="mt-2 text-xs text-muted">{{ session.agreed_rate }} credits/hour · Reading stops after {{ session.disconnect_seconds }} seconds without interaction.</p>
             <div v-if="pending || live" class="mt-3 flex flex-wrap items-center gap-3"><button v-if="isCounselor && pending" class="action !px-4 !py-2" :disabled="action.processing" @click="action.post(route('chat.accept',session.id))">Accept & continue</button><p v-if="pending && !isCounselor" class="text-xs text-muted" role="status">Request sent. Waiting for acceptance; no charge yet.</p><button class="text-xs text-muted underline" :disabled="action.processing" @click="action.post(route('chat.end',session.id))">{{ pending ? 'Cancel request' : 'End reading' }}</button></div>
         </header>
-        <p v-if="connectionError" role="alert" class="text-xs text-error">Reconnecting… Billing stops if the connection remains inactive.</p>
+        <div class="flex flex-wrap items-center justify-between gap-2 px-1 text-xs" role="status"><span :class="!online || connectionError ? 'text-error' : 'text-muted'">{{ !online ? 'Offline · waiting for your connection' : connectionError ? 'Reconnecting to the server…' : !connectedOnce ? 'Connecting…' : socketState === 'connected' ? 'Live updates connected' : 'Live connection unavailable · periodic refresh is active' }}</span><button v-if="connectionError && online" class="text-accent-text underline" @click="heartbeat">Reconnect now</button></div>
         <div ref="container" role="log" aria-label="Conversation messages" aria-live="polite" class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-page p-3 sm:p-5">
             <p v-if="!messages.length" class="py-8 text-center text-sm text-muted">Your messages stay here across readings.</p>
             <template v-for="msg in messages" :key="msg.id"><div v-if="msg.kind === 'system'" class="mx-auto max-w-md rounded-xl bg-accent-soft px-4 py-3 text-center text-xs leading-5 text-accent-text"><span class="block font-medium">Psychic Chat</span>{{ msg.content }}</div><div v-else class="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-4 py-3 text-sm" :class="msg.sender_id === currentUser.id ? 'self-end bg-primary text-on-primary' : 'self-start bg-surface text-content'"><p class="mb-1 text-xs opacity-75">{{ msg.sender?.name }}</p>{{ msg.content }}</div></template>
@@ -86,7 +95,7 @@ const send = async () => {
         <footer class="shrink-0 pb-[env(safe-area-inset-bottom)]">
             <p v-if="!isCounselor" class="mb-2 px-1 text-xs text-muted"><span class="font-medium text-content">{{ Number(balance).toLocaleString(undefined,{maximumFractionDigits:2}) }}</span> credits left</p>
             <form @submit.prevent="send" class="flex gap-2"><label for="message" class="sr-only">Message</label><input id="message" v-model="newMessage" maxlength="4000" :disabled="sending || !live" class="field min-w-0 flex-1" :placeholder="live ? 'Message…' : pending ? 'Waiting for acceptance…' : 'Request to continue…'" /><button class="action !px-4" :disabled="sending || !newMessage.trim() || !live">Send</button></form>
-            <p v-if="error" role="alert" class="mt-2 text-xs text-error">{{ error }}</p><p v-for="e in {...action.errors,...request.errors}" :key="e" role="alert" class="mt-2 text-xs text-error">{{ e }}</p>
+            <p v-if="error" role="alert" class="mt-2 text-xs text-error">{{ error }} <button v-if="newMessage.trim()" type="button" class="ml-2 font-semibold underline" :disabled="sending || !online" @click="send">{{ sending ? 'Retrying…' : 'Retry message' }}</button></p><p v-for="e in {...action.errors,...request.errors}" :key="e" role="alert" class="mt-2 text-xs text-error">{{ e }}</p>
         </footer>
         <Modal :show="showAgreement" :closeable="!request.processing" @close="showAgreement=false"><form @submit.prevent="submitRequest" class="space-y-5 p-6"><h2 class="font-serif text-2xl">Continue with {{ partner?.name }}</h2><p class="rounded-xl bg-accent-soft p-4 text-accent-text">{{ agreement?.rate }} credits / hour</p><p class="text-sm leading-6 text-muted">Charging begins only after counselor acceptance. Your previous messages stay in this conversation. A {{ agreement?.disconnect_seconds }}-second period without interaction or connection ends the reading; unconfirmed time is not charged.</p><label class="flex gap-3 text-sm"><input v-model="request.hide_notice" type="checkbox" /> Don’t show again for this counselor at this rate.</label><p v-for="e in request.errors" :key="e" class="text-error">{{ e }}</p><div class="flex flex-wrap gap-3"><button type="button" class="text-muted" :disabled="request.processing" @click="showAgreement=false">Cancel</button><button class="action" :disabled="request.processing">Agree & request to continue</button></div></form></Modal>
     </main>

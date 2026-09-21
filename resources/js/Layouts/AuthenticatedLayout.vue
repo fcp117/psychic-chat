@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
+import UserAvatar from '@/Components/UserAvatar.vue';
+import NotificationCenter from '@/Components/NotificationCenter.vue';
 import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
@@ -49,7 +51,11 @@ const showingNavigationDropdown = ref(false);
                             </div>
                         </div>
 
-                        <div class="hidden lg:ms-6 lg:flex lg:items-center">
+                        <div class="ml-auto mr-3 flex shrink-0 items-center gap-3 lg:mr-0 lg:pl-4">
+                            <Link v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')" class="hidden rounded-full border border-primary px-3 py-2 text-xs font-semibold text-accent-text hover:bg-accent-soft xl:block">Become a Counselor</Link>
+                            <NotificationCenter />
+                        </div>
+                        <div class="hidden lg:ms-3 lg:flex lg:items-center">
                             <!-- Settings Dropdown -->
                             <div class="relative ms-3">
                                 <Dropdown align="right" width="48">
@@ -59,7 +65,7 @@ const showingNavigationDropdown = ref(false);
                                                 type="button"
                                                 class="inline-flex items-center rounded-md border border-transparent bg-surface px-3 py-2 text-sm font-medium leading-4 text-muted transition duration-150 ease-in-out hover:text-content focus:outline-none"
                                             >
-                                                {{ $page.props.auth.user.name }}
+                                                <UserAvatar :user="$page.props.auth.user" class="mr-2 h-8 w-8 text-xs align-middle" />{{ $page.props.auth.user.name }}
 
                                                 <svg
                                                     class="-me-0.5 ms-2 h-4 w-4"
@@ -78,6 +84,7 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
+                                        <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Counselor</DropdownLink>
                                         <DropdownLink
                                             :href="route('profile.edit')"
                                         >
@@ -159,7 +166,7 @@ const showingNavigationDropdown = ref(false);
                             <div
                                 class="text-base font-medium text-content "
                             >
-                                {{ $page.props.auth.user.name }}
+                                <UserAvatar :user="$page.props.auth.user" class="mr-2 h-8 w-8 text-xs align-middle" />{{ $page.props.auth.user.name }}
                             </div>
                             <div class="text-sm font-medium text-muted ">
                                 {{ $page.props.auth.user.email }}
@@ -167,6 +174,7 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <div class="mt-3 space-y-1">
+                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Counselor</ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('profile.edit')">
                                 Profile
                             </ResponsiveNavLink>

@@ -17,6 +17,6 @@ class EmailVerificationPromptController extends Controller
     {
         return $request->user()->hasVerifiedEmail()
                     ? redirect()->intended(route('dashboard', absolute: false))
-                    : Inertia::render('Auth/VerifyEmail', ['status' => session('status')]);
+                    : Inertia::render('Auth/VerifyEmail', ['status' => session('status'), 'resendAt' => (function() use ($request) { $sent=\Illuminate\Support\Facades\DB::table('email_verification_codes')->where('user_id',$request->user()->id)->value('sent_at'); return $sent ? \Illuminate\Support\Carbon::parse($sent)->addMinute()->getTimestampMs() : null; })()]);
     }
 }

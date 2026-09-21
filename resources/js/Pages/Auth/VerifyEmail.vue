@@ -1,16 +1,23 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import LoginLayout from '@/Layouts/LoginLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
-defineProps({ status: String });
+const props=defineProps({ status: String, resendAt: Number });
+const now=ref(Date.now()); let clock;
+onMounted(()=>clock=setInterval(()=>now.value=Date.now(),1000));
+onUnmounted(()=>clearInterval(clock));
+const remaining=computed(()=>Math.max(0,Math.ceil(((props.resendAt||0)-now.value)/1000)));
+const correcting=ref(false);
+const correction=useForm({email:usePage().props.auth.user.email,password:''});
+const changeEmail=()=>correction.patch(route('verification.email'),{preserveScroll:true,onSuccess:()=>{correcting.value=false;form.reset();},onFinish:()=>correction.reset('password')});
 const page = usePage();
 const form = useForm({ code: '' });
 const resend = useForm({});
 const codeInput = ref(null);
-const busy = computed(() => form.processing || resend.processing);
+const busy = computed(() => form.processing || resend.processing || correction.processing);
 const error = computed(() => form.errors.code || resend.errors.code || page.props.errors?.code);
 
 const updateCode = (event) => {
@@ -65,10 +72,20 @@ const sendAgain = () => {
 
         <div class="mt-6 text-center">
             <p class="text-sm text-muted">Didn’t receive an email?</p>
-            <button type="button" :disabled="busy" @click="sendAgain" class="mt-1 rounded px-2 py-2 text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-50">{{ resend.processing ? 'Sending your code…' : 'Send another code' }}</button>
+            <button type="button" :disabled="busy || remaining > 0" @click="sendAgain" class="mt-1 rounded px-2 py-2 text-sm font-semibold text-accent-text underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-50">{{ resend.processing ? 'Sending your code…' : remaining > 0 ? `Resend in ${remaining}s` : 'Send another code' }}</button>
             <p class="mt-1 text-xs leading-5 text-muted">Please wait 60 seconds between requests.<br />After five incorrect attempts, request a new code.</p>
         </div>
 
+        <section class="mt-6 border-t border-border pt-5">
+            <button type="button" :aria-expanded="correcting" aria-controls="correct-email" :disabled="busy" @click="correcting=!correcting" class="text-sm font-semibold text-accent-text underline">Wrong email address?</button>
+            <form v-if="correcting" id="correct-email" @submit.prevent="changeEmail" class="mt-4 space-y-4">
+                <p class="text-xs leading-5 text-muted">Confirm your password to update your address. Codes sent to your previous address will no longer work.</p>
+                <label class="block text-sm">Correct email<input v-model="correction.email" type="email" autocomplete="email" maxlength="255" required class="field mt-2 w-full" /></label>
+                <label class="block text-sm">Your password<input v-model="correction.password" type="password" autocomplete="current-password" required class="field mt-2 w-full" /></label>
+                <p v-for="e in correction.errors" :key="e" role="alert" class="text-sm text-error">{{ e }}</p>
+                <button class="action w-full" :disabled="busy">{{ correction.processing ? 'Updating…' : 'Update email & send code' }}</button>
+            </form>
+        </section>
         <div class="mt-7 border-t border-border pt-5 text-center">
             <Link :href="route('logout')" method="post" as="button" :disabled="busy" class="rounded px-2 py-1 text-sm text-muted underline-offset-4 hover:text-content hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:opacity-50">Log out and return to login</Link>
         </div>

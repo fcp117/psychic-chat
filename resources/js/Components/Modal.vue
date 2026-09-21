@@ -18,12 +18,15 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 const dialog = ref();
+let previousFocus,closeTimer;
 const showSlot = ref(props.show);
 
 watch(
     () => props.show,
     () => {
+        clearTimeout(closeTimer);
         if (props.show) {
+            previousFocus=document.activeElement;
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
 
@@ -31,8 +34,9 @@ watch(
         } else {
             document.body.style.overflow = '';
 
-            setTimeout(() => {
+            closeTimer=setTimeout(() => {
                 dialog.value?.close();
+                previousFocus?.focus?.();
                 showSlot.value = false;
             }, 200);
         }
@@ -49,7 +53,9 @@ const closeOnEscape = (e) => {
     if (e.key === 'Escape') {
         e.preventDefault();
 
+        clearTimeout(closeTimer);
         if (props.show) {
+            previousFocus=document.activeElement;
             close();
         }
     }
@@ -58,6 +64,7 @@ const closeOnEscape = (e) => {
 onMounted(() => document.addEventListener('keydown', closeOnEscape));
 
 onUnmounted(() => {
+    clearTimeout(closeTimer);
     document.removeEventListener('keydown', closeOnEscape);
 
     document.body.style.overflow = '';
@@ -78,6 +85,7 @@ const maxWidthClass = computed(() => {
     <dialog
         class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
+        aria-label="Action details"
     >
         <div
             class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0"

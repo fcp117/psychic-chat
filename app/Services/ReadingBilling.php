@@ -7,6 +7,7 @@ use Illuminate\Validation\ValidationException;
 
 class ReadingBilling {
     public function notify(ChatSession $session): void {
+        \App\Services\AppNotifications::reading($session);
         DB::afterCommit(function () use ($session) {
             try { broadcast(new \App\Events\ReadingUpdated($session)); } catch (\Throwable $e) { report($e); }
         });
@@ -53,6 +54,7 @@ class ReadingBilling {
             $session->ended_at = $session->started_at->copy()->addSeconds($exhausted ? $session->billed_seconds : $elapsed);
         }
         $session->save();
+        if ($client->credit_units <= max(3600, $session->agreed_rate * 60)) AppNotifications::send($client->id,'low-balance:'.$session->id,'Your reading balance is low','Review your remaining credits before continuing.',route('credits',[],false));
         if ($session->status === 'completed') {
             $this->notice($session, $session->end_reason === 'disconnected'
                 ? 'This reading ended because a participant was inactive. Request to continue whenever you are ready.'

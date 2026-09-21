@@ -1,4 +1,6 @@
 <script setup>
+import UserAvatar from '@/Components/UserAvatar.vue';
+import UpdateProfilePhotoForm from './Partials/UpdateProfilePhotoForm.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
@@ -18,7 +20,7 @@ const initials = computed(() => user.value.name.split(/\s+/).filter(Boolean).sli
             <p class="mt-4 max-w-xl leading-7 text-muted">Manage your details, keep your account secure, and make Psychic Chat your own.</p>
             <div class="mt-9 grid items-start gap-7 lg:grid-cols-[17rem_minmax(0,1fr)]">
                 <aside class="rounded-3xl border border-border bg-surface p-6 shadow-sm">
-                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft font-serif text-2xl text-accent-text" aria-hidden="true">{{ initials }}</div>
+                    <UserAvatar :user="user" class="h-16 w-16 text-2xl" />
                     <h2 class="mt-5 break-words text-lg font-semibold">{{ user.name }}</h2>
                     <p class="mt-1 break-all text-sm text-muted">{{ user.email }}</p>
                     <span class="mt-4 inline-block rounded-full bg-accent-soft px-3 py-1 text-xs capitalize text-accent-text">{{ user.role }}</span>
@@ -29,6 +31,7 @@ const initials = computed(() => user.value.name.split(/\s+/).filter(Boolean).sli
                     </nav>
                 </aside>
                 <div class="min-w-0 space-y-6">
+                    <section class="rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-8"><UpdateProfilePhotoForm /></section>
                     <section id="profile-details" class="scroll-mt-6 rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-8"><UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" /></section>
                     <section id="profile-security" class="scroll-mt-6 rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-8"><UpdatePasswordForm /></section>
                     <section id="profile-close" class="scroll-mt-6 rounded-3xl border border-border bg-surface p-6 shadow-sm sm:p-8"><DeleteUserForm /></section>

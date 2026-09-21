@@ -7,8 +7,9 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
+defineProps({ latestBirthdate: String });
 const showPasswords = ref(false);
-const form = useForm({ name: '', username: '', email: '', password: '', password_confirmation: '' });
+const form = useForm({ birthdate: '', name: '', username: '', email: '', password: '', password_confirmation: '' });
 const submit = () => {
     form.post(route('register'), {
         onFinish: () => form.reset('password', 'password_confirmation'),
@@ -32,6 +33,12 @@ const submit = () => {
                     <p id="username-hint" class="mt-2 text-xs leading-5 text-muted">3–40 letters, numbers, or underscores.</p>
                     <InputError id="username-error" class="mt-2" :message="form.errors.username" />
                 </div>
+            </div>
+            <div>
+                <InputLabel for="birthdate" value="Birthdate" />
+                <TextInput id="birthdate" v-model="form.birthdate" type="date" :max="latestBirthdate" autocomplete="bday" required class="mt-2 block w-full" aria-describedby="birthdate-hint birthdate-error" :aria-invalid="Boolean(form.errors.birthdate)" />
+                <p id="birthdate-hint" class="mt-2 text-xs text-muted">You must be 18 or older. Your birthdate is used for age eligibility and is not shown on public profiles.</p>
+                <InputError id="birthdate-error" class="mt-2" :message="form.errors.birthdate" />
             </div>
             <div>
                 <InputLabel for="email" value="Email address" />

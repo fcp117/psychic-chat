@@ -15,11 +15,22 @@ class AdminController extends Controller {
     }
     public function index(Request $request) {
         $this->billing->sweep();
-        $v=$request->validate(['q'=>'nullable|string|max:100','section'=>['nullable',Rule::in(['users','pricing','transactions','sessions','forecasts','audit'])]]);
-        $q=trim($v['q'] ?? ''); $section=$v['section'] ?? 'users';
-        $data=['section'=>$section,'filters'=>['q'=>$q],'settings'=>$this->billing->settings()];
+        $v=$request->validate(['q'=>'nullable|string|max:100','verification'=>['nullable',Rule::in(['all','verified','unverified'])],'section'=>['nullable',Rule::in(['users','pricing','transactions','sessions','forecasts','audit','applications','health'])]]);
+        $verification=$v['verification'] ?? 'all'; $q=trim($v['q'] ?? ''); $section=$v['section'] ?? 'users';
+        $data=['section'=>$section,'filters'=>['q'=>$q,'verification'=>$verification],'settings'=>$this->billing->settings()];
+        if ($section==='applications') $data['applications']=DB::table('counselor_applications as a')->join('users as u','u.id','=','a.user_id')->select('a.*','u.name','u.email')->orderByRaw("CASE WHEN a.status='pending' THEN 0 ELSE 1 END")->orderByDesc('a.updated_at')->paginate(15)->withQueryString();
+        if ($section==='health') $data['incidents']=DB::table('system_incidents')->orderByDesc('created_at')->paginate(30)->withQueryString();
         if ($section==='pricing') { $data['shop']=app(\App\Services\CreditShop::class)->settings(); $data['packages']=DB::table('credit_packages')->orderBy('id')->get(); $data['paymentMethods']=app(\App\Services\PaymentGateway::class)->methods(); }
-        if ($section==='users') $data['users']=User::when($q!=='',fn($query)=>$query->where(fn($sub)=>$sub->where('name','like','%'.$q.'%')->orWhere('email','like','%'.$q.'%')))->orderBy('id')->paginate(15,['id','name','email','role','credit_units','available_credits','rate_per_hour','is_approved','is_suspended'])->withQueryString();
+        if ($section==='users') $data['users']=User::when($verification==='verified',fn($query)=>$query->whereNotNull('email_verified_at'))->when($verification==='unverified',fn($query)=>$query->whereNull('email_verified_at'))->when($q!=='',fn($query)=>$query->where(fn($sub)=>$sub->where('name','like','%'.$q.'%')->orWhere('email','like','%'.$q.'%')))->orderBy('id')->paginate(15,['id','name','email','email_verified_at','birthdate','created_at','role','credit_units','available_credits','rate_per_hour','is_approved','is_suspended'])->withQueryString();
+        if ($section==='users') {
+            $eligible=app(\App\Services\UnverifiedAccountCleanup::class)->eligible()->whereIn('id',$data['users']->pluck('id'))->pluck('id')->all();
+            $data['users']->through(function($u)use($eligible){
+                $u->makeVisible('birthdate');
+                $u->setAttribute('age',$u->birthdate ? (int)$u->birthdate->diffInYears(now('Asia/Manila')->startOfDay()) : null);
+                $u->setAttribute('cleanup_eligible',in_array($u->id,$eligible,true));
+                return $u;
+            });
+        }
         if ($section==='transactions') $data['transactions']=DB::table('credit_transactions as t')->leftJoin('users as u','u.id','=','t.user_id')->leftJoin('users as a','a.id','=','t.actor_id')->select('t.*','u.name as user_name','a.name as actor_name')->orderByDesc('t.id')->paginate(30)->withQueryString();
         if ($section==='sessions') $data['sessions']=ChatSession::with(['client:id,name','counselor:id,name'])->latest('id')->paginate(20)->withQueryString();
         if ($section==='forecasts') $data['forecasts']=DB::table('forecasts')->orderByDesc('id')->paginate(15)->withQueryString();

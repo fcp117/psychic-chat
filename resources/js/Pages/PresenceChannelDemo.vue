@@ -7,7 +7,7 @@ const onlineCounselors = ref([]);
 
 onMounted(() => {
     // Join the presence channel
-    window.Echo.join('counselors.online')
+    window.Echo?.join('counselors.online')
         // .here() fires immediately with an array of everyone currently in the channel
         .here((users) => {
             onlineCounselors.value = users;
@@ -24,7 +24,7 @@ onMounted(() => {
 
 // Clean up the listener when the component unmounts to prevent memory leaks
 onUnmounted(() => {
-    window.Echo.leave('counselors.online');
+    window.Echo?.leave('counselors.online');
 });
 </script>
 

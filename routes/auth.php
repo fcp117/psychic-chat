@@ -36,6 +36,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::patch('verification-email', [\App\Http\Controllers\Auth\VerificationEmailController::class,'update'])->middleware('throttle:5,60')->name('verification.email');
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 

@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 const paths = [
     { number: '01', title: 'A space to connect', text: 'Return to your conversations and make space for what is on your mind.', label: 'Explore your chats', route: 'chat.index' },
-    { number: '02', title: 'A little perspective', text: 'Your future home for forecasts and moments of reflection.', label: 'Visit Forecast', route: 'forecast' },
+    { number: '02', title: 'A little perspective', text: 'Explore published forecasts and find a moment for reflection.', label: 'Visit Forecast', route: 'forecast' },
     { number: '03', title: 'Your reading balance', text: 'See your available credits and stay ready for your next conversation.', label: 'View credits', route: 'credits' },
 ];
 </script>

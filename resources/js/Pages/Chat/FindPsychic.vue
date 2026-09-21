@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import UserAvatar from '@/Components/UserAvatar.vue';
 import ChatTabs from '@/Components/ChatTabs.vue';
 import Modal from '@/Components/Modal.vue';
 import Dropdown from '@/Components/Dropdown.vue';
@@ -42,11 +43,11 @@ const toggleNotice = psychic => {
             <p v-for="e in reading.errors" :key="e" role="alert" class="mt-3 text-error">{{ e }}</p>
             <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <article v-for="psychic in psychics.data" :key="psychic.id" class="rounded-2xl border border-border bg-surface p-6">
-                    <div class="flex items-start justify-between"><div aria-hidden="true" class="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-xl text-accent-text">{{ psychic.name.charAt(0).toUpperCase() }}</div>
+                    <div class="flex items-start justify-between"><UserAvatar :user="psychic" class="mb-5 h-20 w-20 text-2xl" />
                         <Dropdown v-if="canRequest" align="right" width="48"><template #trigger><button type="button" :aria-label="'Options for ' + psychic.name" class="rounded-lg px-3 py-1 text-2xl text-muted hover:bg-surface-hover">⋮</button></template><template #content><button type="button" :disabled="notifications.processing" @click="toggleNotice(psychic)" class="w-full px-4 py-3 text-left text-sm hover:bg-surface-hover">Rate notifications: {{ psychic.show_rate_notice ? 'On' : 'Off' }}<span class="mt-1 block text-xs text-muted">{{ psychic.show_rate_notice ? 'Turn off reminders' : 'Turn on reminders' }}</span></button></template></Dropdown>
                     </div>
                     <p class="text-xs uppercase tracking-widest text-accent-text">Psychic counselor</p><h2 class="mt-2 text-lg font-semibold">{{ psychic.name }}</h2><p class="mt-2 text-sm text-muted">{{ psychic.rate_per_hour }} credits / hour</p>
-                    <button v-if="canRequest" type="button" :disabled="reading.processing" @click="requestReading(psychic)" class="action mt-6 w-full">Request chat</button>
+                    <Link :href="route('counselor.profile',psychic.id)" class="mt-4 inline-block text-sm text-accent-text underline">View counselor profile</Link><button v-if="canRequest" type="button" :disabled="reading.processing" @click="requestReading(psychic)" class="action mt-6 w-full">Request chat</button>
                 </article>
             </div>
             <div v-if="!psychics.data.length" class="mt-8 rounded-2xl border border-border bg-surface p-9"><h2 class="font-serif text-2xl">{{ filters.q ? 'No matching psychics.' : 'No other approved psychics yet.' }}</h2><p class="mt-3 text-muted">Try another search or check back later.</p></div><PageLinks :data="psychics" />

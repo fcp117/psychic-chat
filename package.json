@@ -1,25 +1,28 @@
 {
-    "$schema": "https://www.schemastore.org/package.json",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "build": "vite build",
-        "dev": "vite"
-    },
-    "devDependencies": {
-        "@inertiajs/vue3": "^2.0.0",
-        "@laravel/echo-vue": "^2.4.0",
-        "@tailwindcss/forms": "^0.5.3",
-        "@tailwindcss/vite": "^4.0.0",
-        "@vitejs/plugin-vue": "^6.0.0",
-        "autoprefixer": "^10.4.12",
-        "concurrently": "^9.0.1",
-        "laravel-echo": "^2.4.0",
-        "laravel-vite-plugin": "^3.1",
-        "postcss": "^8.4.31",
-        "pusher-js": "^8.5.0",
-        "tailwindcss": "^3.2.1",
-        "vite": "^8.0.0",
-        "vue": "^3.4.0"
-    }
+  "$schema": "https://www.schemastore.org/package.json",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "start": "npm run build && npm run services",
+    "services": "concurrently --kill-others --names=website,chat,queue,scheduler --prefix-colors=blue,magenta,yellow,green \"node scripts/serve-local.mjs\" \"php artisan reverb:start\" \"php artisan queue:work --tries=3 --timeout=60\" \"php artisan schedule:work\"",
+    "dev:all": "concurrently --kill-others --names=services,vite \"npm run services\" \"npm run dev\""
+  },
+  "devDependencies": {
+    "@inertiajs/vue3": "^2.0.0",
+    "@laravel/echo-vue": "^2.4.0",
+    "@tailwindcss/forms": "^0.5.3",
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "autoprefixer": "^10.4.12",
+    "concurrently": "^9.0.1",
+    "laravel-echo": "^2.4.0",
+    "laravel-vite-plugin": "^3.1",
+    "postcss": "^8.4.31",
+    "pusher-js": "^8.5.0",
+    "tailwindcss": "^3.2.1",
+    "vite": "^8.0.0",
+    "vue": "^3.4.0"
+  }
 }

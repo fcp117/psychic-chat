@@ -10,12 +10,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'username', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable(['name', 'username', 'email', 'password', 'birthdate'])]
+#[Hidden(['password', 'remember_token', 'profile_photo_path', 'birthdate'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected $appends = ['profile_photo_url'];
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        return $this->profile_photo_path ? '/members/'.$this->id.'/photo?v='.substr(hash('sha256', $this->profile_photo_path), 0, 16) : null;
+    }
 
     public function sendEmailVerificationNotification() { app(\App\Services\EmailVerificationCodes::class)->send($this); }
 
@@ -35,6 +42,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'birthdate' => 'date:Y-m-d',
             'password' => 'hashed',
             'credit_units' => 'integer', 'rate_per_hour' => 'integer',
             'is_approved' => 'boolean', 'is_suspended' => 'boolean',

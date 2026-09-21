@@ -16,7 +16,9 @@ class CreditPayments {
             if($current->paid_at) return true;
             $units=$current->credits*3600; $user->credit_units+=$units; $user->save();
             DB::table('credit_transactions')->insert(['user_id'=>$user->id,'purchase_id'=>$current->id,'kind'=>'sandbox_topup','amount_units'=>$units,'balance_units'=>$user->credit_units,'earning_units'=>0,'reason'=>'Sandbox '.$current->provider.' purchase: '.$current->label,'created_at'=>now(),'updated_at'=>now()]);
-            $current->update(['status'=>'paid','paid_at'=>now()]); return true;
+            $current->update(['status'=>'paid','paid_at'=>now()]);
+            AppNotifications::send($user->id,'purchase:'.$current->id,'Credits added',$current->credits.' credits were added after payment verification.',route('credits.purchase',$current->id,false));
+            return true;
         },3);
     }
 }

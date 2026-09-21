@@ -16,12 +16,12 @@ class ChatController extends Controller {
     public function psychics(Request $request) {
         $search = trim($request->validate(['q'=>['nullable','string','max:100']])['q'] ?? '');
         $prefs = DB::table('counselor_preferences')->where('user_id',$request->user()->id)->get()->keyBy('counselor_id');
-        $psychics = User::where('role','counselor')->where('is_approved',true)->where('is_suspended',false)
+        $psychics = User::where('role','counselor')->whereNotNull('email_verified_at')->where('is_approved',true)->where('is_suspended',false)
             ->where('id','!=',$request->user()->id)->when($search !== '',fn($q)=>$q->where('name','like','%'.$search.'%'))
-            ->orderBy('name')->paginate(12,['id','name','rate_per_hour'])->withQueryString();
+            ->orderBy('name')->paginate(12,['id','name','rate_per_hour','profile_photo_path'])->withQueryString();
         $psychics->through(function ($u) use ($prefs) {
             $rate = $this->billing->rate($u); $p = $prefs->get($u->id);
-            return ['id'=>$u->id,'name'=>$u->name,'rate_per_hour'=>$rate,
+            return ['id'=>$u->id,'name'=>$u->name,'profile_photo_url'=>$u->profile_photo_url,'rate_per_hour'=>$rate,
                 'has_rate_agreement'=>$p && (int)$p->accepted_rate === $rate,
                 'show_rate_notice'=>!$p || $p->show_rate_notice || (int)$p->accepted_rate !== $rate];
         });
@@ -113,12 +113,17 @@ class ChatController extends Controller {
     }
     public function store(Request $request, ChatSession $chatSession) {
         $this->member($request,$chatSession);
-        $request->validate(['content'=>'required|string|max:4000']);
+        $request->validate(['content'=>'required|string|max:4000','request_key'=>'nullable|uuid']);
+        if($request->filled('request_key')) {
+            $existing=\App\Models\Message::where('sender_id',$request->user()->id)->where('request_key',$request->request_key)->first();
+            if($existing) { abort_unless($existing->chat_session_id===$chatSession->id && $existing->content===$request->content,409); return response()->json(['message'=>$existing->load('sender:id,name')]); }
+        }
         $this->billing->settle($chatSession->id,$request->user()->id,false,true);
         $message=DB::transaction(function () use ($chatSession,$request) {
             $s=ChatSession::whereKey($chatSession->id)->lockForUpdate()->firstOrFail();
+            if($request->filled('request_key')) { $existing=\App\Models\Message::where('sender_id',$request->user()->id)->where('request_key',$request->request_key)->first(); if($existing) {abort_unless($existing->chat_session_id===$s->id && $existing->content===$request->content,409); return $existing;} }
             if ($s->status!=='active') $this->billing->fail('Messages are available only during an accepted, active reading.');
-            return $s->messages()->create(['sender_id'=>$request->user()->id,'content'=>$request->content]);
+            return $s->messages()->create(['sender_id'=>$request->user()->id,'content'=>$request->content,'request_key'=>$request->input('request_key')]);
         });
         $message->load('sender:id,name');
         // A broadcast outage must not make a saved message look unsent.

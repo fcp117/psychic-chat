@@ -18,7 +18,7 @@ try {
  check(Illuminate\Support\Facades\Artisan::call('migrate',['--force'=>true])===0,'isolated migrations');
  Notification::fake();
  $session=app('session')->driver();$session->start();
- $r=Illuminate\Http\Request::create('/register','POST',['name'=>'New User','username'=>'New_User','email'=>'NEW@example.test','password'=>'Example123!','password_confirmation'=>'Example123!','role'=>'admin','credit_units'=>999]);
+ $r=Illuminate\Http\Request::create('/register','POST',['name'=>'New User','birthdate'=>'1990-01-01','username'=>'New_User','email'=>'NEW@example.test','password'=>'Example123!','password_confirmation'=>'Example123!','role'=>'admin','credit_units'=>999]);
  $r->setLaravelSession($session);
  app(App\Http\Controllers\Auth\RegisteredUserController::class)->store($r);
  $user=User::where('username','new_user')->firstOrFail();

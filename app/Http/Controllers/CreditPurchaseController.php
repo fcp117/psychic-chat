@@ -42,7 +42,7 @@ class CreditPurchaseController extends Controller {
     }
     public function show(Request $r,CreditPurchase $purchase) {
         abort_unless($purchase->user_id===$r->user()->id,403);
-        return Inertia::render('Credits/Purchase',['purchase'=>$purchase->only(['id','label','amount','credits','provider','status','paid_at','checkout_url','environment']),'paymentError'=>$r->session()->get('payment_error')]);
+        return Inertia::render('Credits/Purchase',['purchase'=>$purchase->only(['id','label','amount','credits','provider','status','paid_at','checkout_url','environment']),'paymentError'=>$r->session()->get('payment_error'),'returnHint'=>$r->boolean('cancelled')?'cancelled':($r->boolean('failed')?'failed':null)]);
     }
     public function verify(Request $r,CreditPurchase $purchase) {
         abort_unless($purchase->user_id===$r->user()->id,403);

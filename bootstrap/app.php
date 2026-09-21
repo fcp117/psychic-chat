@@ -29,6 +29,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias(['role' => \App\Http\Middleware\RequireRole::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->report(function (\Throwable $e) { \App\Services\IncidentReporter::record($e); });
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $e, Request $request) {
+            $status=$response->getStatusCode();
+            if(in_array($status,[403,404,419,429,500,503])) {
+                if($request->expectsJson() && !$request->header('X-Inertia')) return response()->json(['message'=>match($status){403=>'You do not have access to this action.',404=>'This item is no longer available.',419=>'Your session expired. Refresh and sign in again.',429=>'Too many requests. Wait a moment before trying again.',default=>'We could not complete this request. Please try again shortly.'}],$status)->withHeaders($status===429?['Retry-After'=>$response->headers->get('Retry-After','60')]:[]);
+                if($request->header('X-Inertia') && !in_array($request->method(),['GET','HEAD'])) {
+                    return back()->withErrors(['request'=>match($status){403=>'You do not have access to this action.',404=>'This item is no longer available. Refresh this page.',419=>'Your session expired. Refresh this page before trying again.',429=>'Too many requests. Wait a minute before trying again.',default=>'The request could not be confirmed. Check its current status before retrying.'}]);
+                }
+                return \Inertia\Inertia::render('Error',['status'=>$status])->toResponse($request)->setStatusCode($status);
+            }
+            return $response;
+        });
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

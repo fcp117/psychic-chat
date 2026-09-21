@@ -6,8 +6,9 @@ use Inertia\Inertia;
 use App\Http\Controllers\ChatController;
 
 Route::get('/', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('home');
+    if (request()->user() && !request()->user()->hasVerifiedEmail()) return redirect()->route('verification.notice');
+    return Inertia::render(request()->user() ? 'Dashboard' : 'Welcome');
+})->name('home');
 
 // Keep existing dashboard links and authentication redirects compatible.
 Route::get('/dashboard', fn () => redirect()->route('home'))
@@ -44,6 +45,9 @@ Route::get('/demo', function() {
 })->middleware(['auth', 'verified'])->name('demo');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/profile/photo', [\App\Http\Controllers\ProfilePhotoController::class, 'store'])->middleware('throttle:10,1')->name('profile.photo.store');
+    Route::delete('/profile/photo', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
+    Route::get('/members/{user}/photo', [\App\Http\Controllers\ProfilePhotoController::class, 'show'])->name('profile.photo.show');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -62,6 +66,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('settings');
+    Route::post('/account-cleanup/preview', [\App\Http\Controllers\AccountCleanupController::class,'preview'])->middleware('throttle:10,1')->name('cleanup.preview');
+    Route::delete('/account-cleanup', [\App\Http\Controllers\AccountCleanupController::class,'destroy'])->middleware('throttle:10,1')->name('cleanup.destroy');
     Route::patch('/credit-shop', [\App\Http\Controllers\AdminController::class,'shop'])->name('shop');
     Route::post('/credit-packages', [\App\Http\Controllers\AdminController::class,'package'])->name('package');
     Route::patch('/pricing', [\App\Http\Controllers\AdminController::class, 'pricing'])->name('pricing');
@@ -72,6 +78,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::post('/forecasts', [\App\Http\Controllers\AdminController::class, 'forecast'])->name('forecast');
 });
 
+Route::middleware(['auth','verified'])->group(function() {
+    Route::get('/become-a-counselor',[\App\Http\Controllers\CounselorApplicationController::class,'show'])->name('counselor.apply');
+    Route::post('/become-a-counselor',[\App\Http\Controllers\CounselorApplicationController::class,'store'])->middleware(['role:user','throttle:5,60'])->name('counselor.submit');
+    Route::get('/counselors/{counselor}',[\App\Http\Controllers\CounselorApplicationController::class,'profile'])->name('counselor.profile');
+    Route::patch('/admin/applications/{application}',[\App\Http\Controllers\CounselorApplicationController::class,'review'])->middleware('role:admin')->name('admin.application.review');
+    Route::get('/notifications',[\App\Http\Controllers\NotificationController::class,'index'])->name('notifications.index');
+    Route::post('/notifications/read',[\App\Http\Controllers\NotificationController::class,'read'])->middleware('throttle:60,1')->name('notifications.read');
+});
 require __DIR__.'/auth.php';
 
 Route::post('/payment-webhooks/{provider}', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->whereIn('provider',['stripe','paypal','maya','gcash'])->middleware('throttle:120,1')->name('payments.webhook');
