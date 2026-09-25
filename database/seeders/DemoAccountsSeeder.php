@@ -14,17 +14,48 @@ class DemoAccountsSeeder extends Seeder
 {
     protected function passwordFor(string $username): string
     {
-        if (!$this->command || !$this->command->getInput()->isInteractive()) {
-            throw new RuntimeException('Run this seeder in an interactive terminal to enter private passwords.');
+        if (!$this->command) {
+            throw new RuntimeException(
+                'Run this seeder from an Artisan command so passwords can be entered interactively.'
+            );
         }
+
         while (true) {
-            $password = $this->command->secret("Choose password for {$username}", false);
-            if (!is_string($password) || $password === '') throw new RuntimeException('Password entry cancelled. No demo accounts were created.');
-            $validator = Validator::make(['password' => $password], ['password' => ['required', Password::defaults()]]);
-            if ($validator->fails()) { $this->command->warn($validator->errors()->first('password')); continue; }
-            if ($password !== $this->command->secret("Confirm password for {$username}", false)) {
-                $this->command->warn('Passwords did not match. Try again.'); continue;
+            $password = $this->command->secret(
+                "Choose password for {$username}",
+                false
+            );
+
+            if (!is_string($password) || $password === '') {
+                throw new RuntimeException(
+                    'Password entry cancelled. No demo accounts were created.'
+                );
             }
+
+            $validator = Validator::make(
+                ['password' => $password],
+                ['password' => ['required', Password::defaults()]]
+            );
+
+            if ($validator->fails()) {
+                $this->command->warn(
+                    $validator->errors()->first('password')
+                );
+                continue;
+            }
+
+            $confirmation = $this->command->secret(
+                "Confirm password for {$username}",
+                false
+            );
+
+            if ($password !== $confirmation) {
+                $this->command->warn(
+                    'Passwords did not match. Try again.'
+                );
+                continue;
+            }
+
             return $password;
         }
     }
