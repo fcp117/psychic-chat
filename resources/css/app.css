@@ -46,19 +46,23 @@
 @tailwind utilities;
 
 @layer base {
-    body { @apply bg-page text-content; }
+    html, body, #app { min-width: 0; }
+    body { @apply overflow-x-hidden bg-page text-content; }
+    img, svg, video, canvas { max-width: 100%; }
     input::placeholder, textarea::placeholder { color: var(--color-muted); }
 }
 
 /* Responsive portrait framing; adjust the focal point to reposition the subject. */
 .psychic-hero { --hero-focus: 70%; background-image: url('/images/psychic-light.png'); background-size: cover; background-repeat: no-repeat; background-position: var(--hero-focus) center; }
 .dark .psychic-hero { background-image: url('/images/psychic-dark.png'); }
+.dashboard-hero { margin-top: -5.5rem; padding-top: 5.5rem; }
 .hero-content { min-height: clamp(30rem, calc(100svh - 5rem), 52rem); }
 .hero-title { font-size: clamp(2.4rem, 5.5vw, 4.5rem); }
 .hero-shade { background: linear-gradient(90deg, color-mix(in srgb, var(--color-page) 85%, transparent), transparent 80%); }
 @media (max-width: 767px) {
     .psychic-hero { --hero-focus: 72%; }
     .hero-content { min-height: min(46rem, calc(100svh - 4rem)); }
+    .dashboard-hero { min-height: 46rem; }
     .hero-shade { background: linear-gradient(90deg, color-mix(in srgb, var(--color-page) 96%, transparent), color-mix(in srgb, var(--color-page) 75%, transparent) 60%, color-mix(in srgb, var(--color-page) 35%, transparent)); }
 }
 @media (max-height: 500px) and (orientation: landscape) { .hero-content { min-height: 25rem; padding-block: 2rem; } }
@@ -83,6 +87,9 @@
     outline-offset: 3px;
 }
 @media (max-width: 639px) {
+    .app-shell { background-image: none; }
     .app-content h1 { font-size: clamp(1.9rem, 8vw, 2.5rem); }
     .app-content article { overflow-wrap: anywhere; }
+    .app-content :is(.rounded-2xl, .rounded-3xl) { border-radius: 1rem; }
+    .app-content :is(input, select, textarea, button) { max-width: 100%; }
 }

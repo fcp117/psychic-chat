@@ -45,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/credits/checkout', [\App\Http\Controllers\CreditPurchaseController::class,'checkout'])->middleware(['role:user','throttle:10,1'])->name('credits.checkout');
     Route::get('/credits/purchases/{purchase}', [\App\Http\Controllers\CreditPurchaseController::class,'show'])->name('credits.purchase');
     Route::post('/credits/purchases/{purchase}/verify', [\App\Http\Controllers\CreditPurchaseController::class,'verify'])->middleware('throttle:12,1')->name('credits.verify');
+    Route::post('/credits/purchases/{purchase}/cancel', [\App\Http\Controllers\CreditPurchaseController::class,'cancel'])->middleware('throttle:6,1')->name('credits.cancel');
 });
 
 Route::get('/demo', function() {
@@ -95,4 +96,4 @@ Route::middleware(['auth','verified'])->group(function() {
 });
 require __DIR__.'/auth.php';
 
-Route::post('/payment-webhooks/{provider}', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->whereIn('provider',['stripe','paypal','maya','gcash'])->middleware('throttle:120,1')->name('payments.webhook');
+Route::post('/payment-webhooks/paymongo', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->middleware('throttle:120,1')->name('payments.webhook');

@@ -1,52 +1,38 @@
-# Credit shop and sandbox payments
+# Credit shop and PayMongo sandbox payments
 
-## Use the shop
+## What is connected
 
-Admin Settings → Pricing & Billing → Credit purchases controls custom peso pricing, the minimum purchase and credit packages. The initial custom price is PHP 1.00 per credit, minimum PHP 1.00. One active package offers 1 credit for PHP 1.00. Add a package with a name, whole-credit quantity, total peso price and visibility. Packages below the shop minimum are hidden. Manual admin credit adjustments remain available.
+The application uses one provider: **PayMongo**. The hosted PayMongo Checkout page displays only the payment methods configured in `PAYMONGO_PAYMENT_METHOD_TYPES`. The starter setting is `card`; use a comma-separated list such as `card,gcash,paymaya` only after those methods have been activated for the merchant account.
 
-Prices are integer centavos. Accepted purchases snapshot their price and credit quantity. Changing catalog prices does not rewrite existing purchases. Client-provided totals are checked against server quotes before checkout. The purchase limit is PHP 100,000 and 100,000 credits.
+No PayPal, Stripe, standalone Maya, or standalone GCash integration remains in the application. PayMongo manages the customer payment screen and merchant settlement.
 
-## Connection status
+## Test setup
 
-All providers are disabled by default. The application currently supports SANDBOX ONLY. No real payment was made during development. Configure test credentials in the local .env using the blank names in .env.example, then run `php artisan config:clear`. Never put secrets in frontend code, admin forms, source control, screenshots or chat.
+Keep checkout in sandbox while staging:
 
-- PayPal: sandbox client ID, secret and webhook ID, then PAYPAL_ENABLED=true. Register /payment-webhooks/paypal for CHECKOUT.ORDER.APPROVED and PAYMENT.CAPTURE.COMPLETED. The approved order is captured server-side with an idempotency key.
-- Stripe: sk_test_ secret and test webhook signing secret, then STRIPE_ENABLED=true. Register /payment-webhooks/stripe for checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed and checkout.session.expired. Live keys and live responses are rejected.
-- Maya: sandbox public and secret API keys, then MAYA_ENABLED=true. Register /payment-webhooks/maya for PAYMENT_SUCCESS, PAYMENT_FAILED, PAYMENT_EXPIRED and PAYMENT_CANCELLED. Only documented sandbox source IPs are allowed, followed by API verification. Configure trusted proxies correctly if hosting behind a proxy; do not allow arbitrary forwarded IP headers.
+```env
+PAYMONGO_ENABLED=true
+PAYMONGO_TEST_SECRET=sk_test_...
+PAYMONGO_TEST_WEBHOOK_SECRET=...
+PAYMONGO_PAYMENT_METHOD_TYPES=gcash
+PAYMONGO_MINIMUM_CENTAVOS=100
+```
 
-Set APP_URL to the actual externally reachable HTTPS website URL before testing provider callbacks. Localhost is not reachable by payment providers. A public HTTPS test deployment or development tunnel is needed for webhooks. No tunnel or external deployment has been created automatically.
+Clear cached configuration after updating environment settings. Create one PayMongo **test-mode** webhook for:
 
-Keep `php artisan schedule:work` running. Authenticated webhooks flag saved purchases for reconciliation and return promptly; the scheduler checks pending purchases every minute, at most 20 per run. The return page also checks the payment through an owner-only POST endpoint. A return URL, a screenshot, or an unverified callback never adds credits. All successful credits are recorded once under the unique purchase ID in the ledger. Test top-ups are labeled sandbox_topup.
+```text
+https://YOUR-STAGING-DOMAIN/payment-webhooks/paymongo
+```
 
-The configured provider minimums start at 100 centavos and can be raised in server configuration. Provider/account/settlement-currency restrictions may impose a higher actual minimum or reject a payment. A package can remain available while a particular payment method cannot process it.
+Subscribe it to `checkout_session.payment.paid`, copy its signing secret to `PAYMONGO_TEST_WEBHOOK_SECRET`, and keep the scheduler running. A public HTTPS staging URL is required; PayMongo cannot reach `localhost`.
 
-## Testing and activation
+The webhook is only a prompt to reconcile the saved purchase. Credits are issued only after the server uses the authenticated PayMongo API to confirm the matching checkout ID, reference number, PHP amount, configured payment type, test mode, and paid status. Each purchase can create credit ledger entries only once.
 
-`php tests/PaymentWorkflowCheck.php` runs against a temporary SQLite database with mocked HTTP APIs and blocks external requests. It covers pricing, hidden packages, unauthorized access, amount/currency/reference verification, sandbox restrictions and duplicate fulfillment. `php tests/BillingWorkflowCheck.php` covers the existing billing/admin workflow.
+## Safety rules
 
-No provider end-to-end sandbox checkout has been verified yet because merchant credentials are not configured. Once credentials are available, test hosted checkout, abandonment, failed payments, delayed/duplicate callbacks, minimum amounts and displayed balances for each provider before enabling customer use.
+- Never place secret keys in source code, frontend code, screenshots, or Git.
+- Use only `sk_test_...` credentials for this staging implementation.
+- Sandbox checkout is deliberately blocked when `APP_ENV=production`.
+- A real-money release needs a separate reviewed change: live PayMongo keys, live webhook, production callback testing, refund/chargeback procedure, and explicit production safety approval.
 
-Use separate test users/databases for sandbox purchases. Sandbox credits are spendable within this development app but have no monetary value. Do not carry test balances into a live deployment. Live payment activation, merchant eligibility, real-money refunds, chargebacks and production accounting require a separate implementation/review; the existing reading refund returns app credits only.
-
-Official references:
-- https://developer.paypal.com/sandbox-testing/accounts
-- https://developer.paypal.com/api/orders/v2
-- https://docs.stripe.com/api/checkout/sessions/create
-- https://docs.stripe.com/currencies
-- https://developers.maya.ph/reference/createv1checkout
-- https://developers.maya.ph/reference/getpaymentviapaymentid-1
-- https://developers.maya.ph/reference/configuring-your-webhook-for-maya-checkout
-
-## GCash through PayMongo
-
-GCash appears as its own Credits payment option and in admin connection status. It uses PayMongo hosted checkout restricted to the gcash method, with no fee passed on to the customer. Existing Maya sandbox configuration is unchanged. Maya's shared sandbox does not support GCash testing.
-
-To connect, obtain your own PayMongo test secret (sk_test_...) and test webhook signing secret. Put them in PAYMONGO_TEST_SECRET and PAYMONGO_TEST_WEBHOOK_SECRET in .env, then set GCASH_ENABLED=true and run php artisan config:clear. Register the HTTPS endpoint /payment-webhooks/gcash for checkout_session.payment.paid in PayMongo test mode. Keep the scheduler running. The callback only schedules verification; the authenticated provider API must confirm the matching purchase, amount, PHP currency, GCash method and test mode before crediting.
-
-Default method minimum is PHP 1.00. PayMongo merchant eligibility and payment-method activation still apply. Shared Maya credentials cannot enable this integration. Never enter live wallet credentials in test checkout. No actual PayMongo end-to-end test has been performed without merchant test keys; regression tests use isolated databases and mocked responses.
-
-References:
-- https://docs.paymongo.com/docs/payment-channels-hosted-checkout
-- https://docs.paymongo.com/docs/payment-acceptance-testing
-- https://docs.paymongo.com/docs/developer-tools-webhook-setup-management
-- https://docs.paymongo.com/docs/account-settings-account-capabilities
+Run `php tests/PaymentWorkflowCheck.php` for mocked, isolated payment regression checks. It makes no external request and never uses your credentials.

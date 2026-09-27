@@ -17,7 +17,7 @@ Artisan::command('readings:settle', function () {
 
 
 Artisan::command('payments:reconcile', function () {
-    \App\Models\CreditPurchase::where('status','pending')->whereNotNull('provider_id')->where(fn($q)=>$q->where('created_at','>=',now()->subDays(2))->orWhereNull('checked_at'))->orderByRaw('COALESCE(checked_at, created_at)')->limit(20)->get()->each(function($purchase) {
+    \App\Models\CreditPurchase::whereIn('status',['pending','cancelled'])->whereNotNull('provider_id')->where(fn($q)=>$q->where('created_at','>=',now()->subDays(2))->orWhereNull('checked_at'))->orderByRaw('COALESCE(checked_at, created_at)')->limit(20)->get()->each(function($purchase) {
         try { app(\App\Services\CreditPayments::class)->sync($purchase); }
         catch(\Throwable $e) { $purchase->update(['checked_at'=>now()]); \Illuminate\Support\Facades\Log::warning('Payment reconciliation deferred',['purchase'=>$purchase->id,'error_type'=>get_class($e)]); }
     });

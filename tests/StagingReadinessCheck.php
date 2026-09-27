@@ -21,8 +21,8 @@ stagingCheck(config('mail.mailers.resend.transport') === 'resend', 'Resend trans
 
 $originalEnvironment = $app['env'];
 $app['env'] = 'production';
-config(['payments.stripe.enabled' => true, 'payments.stripe.secret' => 'sk_test_fixture', 'payments.stripe.webhook_secret' => 'whsec_fixture']);
-stagingCheck(! app(App\Services\PaymentGateway::class)->ready('stripe'), 'sandbox checkout is blocked in production');
+config(['payments.paymongo.enabled' => true, 'payments.paymongo.secret' => 'sk_test_fixture', 'payments.paymongo.webhook_secret' => 'fixture', 'payments.paymongo.payment_method_types' => ['gcash']]);
+stagingCheck(! app(App\Services\PaymentGateway::class)->ready('paymongo'), 'sandbox checkout is blocked in production');
 $app['env'] = $originalEnvironment;
 
 echo "STAGING READINESS CONFIGURATION CHECK PASSED\n";

@@ -22,11 +22,9 @@ const pesos = (cents) =>
     }).format(cents / 100);
 
 const selected = ref(props.packages[0]?.id ?? null);
-const quantity = ref(Math.max(1, Math.ceil(props.shop.minimum_amount / props.shop.price_per_credit)));
-
 const item = computed(() => props.packages.find((p) => p.id === selected.value));
-const count = computed(() => (item.value ? item.value.credits : Number(quantity.value)));
-const total = computed(() => (item.value ? item.value.amount : count.value * props.shop.price_per_credit));
+const count = computed(() => (item.value ? item.value.credits : 0));
+const total = computed(() => (item.value ? item.value.amount : 0));
 const canBuy = computed(() => usePage().props.auth.user.role === 'user');
 
 const form = useForm({
@@ -43,7 +41,7 @@ const method = computed(() => props.paymentMethods.find((p) => p.id === form.pro
 const valid = computed(
     () =>
         canBuy.value &&
-        (item.value || props.shop.custom_enabled) &&
+        item.value &&
         Number.isInteger(count.value) &&
         count.value >= 1 &&
         count.value <= 100000 &&
@@ -52,15 +50,15 @@ const valid = computed(
         method.value?.available
 );
 
-watch([selected, quantity, () => form.provider], () => {
+watch([selected, () => form.provider], () => {
     form.request_key = crypto.randomUUID();
     form.clearErrors();
 });
 
 const buy = () => {
     if (!valid.value) return;
-    form.package_id = item.value?.id ?? null;
-    form.credits = item.value ? null : count.value;
+    form.package_id = item.value.id;
+    form.credits = null;
     form.expected_amount = total.value;
     form.expected_credits = count.value;
     form.post(route('credits.checkout'));
@@ -71,15 +69,22 @@ const buy = () => {
     <Head title="Credits" />
 
     <AuthenticatedLayout>
-        <section class="mx-auto max-w-5xl px-5 py-12">
+        <section class="mx-auto max-w-7xl px-5 py-12">
             <p class="text-xs uppercase tracking-widest text-accent-text">Your reading balance</p>
             <h1 class="mt-3 font-serif text-4xl">Credits</h1>
 
-            <div class="my-8 rounded-2xl bg-accent-soft p-7">
-                <p class="text-sm">Available credits</p>
-                <p class="mt-3 font-serif text-5xl">
-                    {{ balance.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}
-                </p>
+            <div class="my-8 overflow-hidden rounded-3xl border border-primary/20 bg-accent-soft p-7 shadow-sm sm:flex sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-accent-text">Reading balance</p>
+                    <p class="mt-3 font-serif text-5xl">
+                        {{ balance.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}
+                    </p>
+                    <p class="mt-2 text-sm text-muted">Use credits when a spiritual advisor accepts your reading request.</p>
+                </div>
+                <div class="mt-5 rounded-2xl border border-primary/20 bg-surface/80 px-4 py-3 text-sm sm:mt-0">
+                    <p class="font-semibold text-accent-text">Pay only for what you choose</p>
+                    <p class="mt-1 text-xs text-muted">Secure checkout is handled by PayMongo.</p>
+                </div>
             </div>
 
             <!-- Credit Purchase Section -->
@@ -91,19 +96,21 @@ const buy = () => {
                     </span>
                 </div>
                 <p class="mt-3 text-sm text-muted">
-                    Choose a package or enter the credits you need. Minimum purchase: {{ pesos(shop.minimum_amount) }}.
+                    Choose a package. Your chat time depends on the spiritual advisor’s displayed hourly rate.
                 </p>
 
-                <!-- Packages Grid -->
-                <fieldset class="mt-6">
-                    <legend class="sr-only">Choose a credit package</legend>
-                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <fieldset>
+                    <legend class="mb-3 text-sm font-semibold text-content">Choose a package</legend>
+                    <div class="grid gap-3 sm:grid-cols-2">
                         <label
                             v-for="pack in packages"
                             :key="pack.id"
-                            class="cursor-pointer rounded-2xl border bg-surface p-5"
-                            :class="selected === pack.id ? 'border-primary ring-1 ring-primary' : 'border-border'"
+                            class="relative cursor-pointer overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                            :class="selected === pack.id ? 'border-primary ring-2 ring-primary/30' : 'border-border'"
                         >
+                            <span v-if="pack.name === 'Most popular'" class="absolute right-0 top-0 rounded-bl-xl bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">Popular</span>
+                            <span v-if="pack.name === 'Best value'" class="absolute right-0 top-0 rounded-bl-xl bg-accent-text px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">Best value</span>
                             <div class="flex justify-between gap-3">
                                 <span class="font-semibold">{{ pack.name }}</span>
                                 <input
@@ -113,64 +120,34 @@ const buy = () => {
                                     v-model="selected"
                                 />
                             </div>
-                            <p class="mt-5 text-2xl">
+                            <p class="mt-4 text-xl">
                                 {{ pack.credits.toLocaleString() }}
                                 <span class="text-sm text-muted">credits</span>
                             </p>
                             <p class="mt-2 font-semibold text-accent-text">{{ pesos(pack.amount) }}</p>
+                            <p class="mt-1 text-xs text-muted">{{ pesos(Math.round(pack.amount / pack.credits)) }} per credit</p>
                         </label>
 
-                        <label
-                            v-if="shop.custom_enabled"
-                            class="cursor-pointer rounded-2xl border bg-surface p-5"
-                            :class="selected === null ? 'border-primary ring-1 ring-primary' : 'border-border'"
-                        >
-                            <div class="flex justify-between gap-3">
-                                <span class="font-semibold">Custom amount</span>
-                                <input
-                                    type="radio"
-                                    name="credit-option"
-                                    :value="null"
-                                    v-model="selected"
-                                />
-                            </div>
-                            <p class="mt-5 text-sm text-muted">{{ pesos(shop.price_per_credit) }} per credit</p>
-                            <span class="mt-3 block text-xs text-muted">Enter your own credit quantity below.</span>
-                        </label>
                     </div>
+                    <p v-if="!packages.length" class="mt-5 text-muted">
+                    Credit purchases are currently unavailable.
+                    </p>
                 </fieldset>
 
-                <p v-if="!packages.length && !shop.custom_enabled" class="mt-5 text-muted">
-                    Credit purchases are currently unavailable.
-                </p>
-
-                <!-- Checkout Form -->
-                <form @submit.prevent="buy" class="mt-6 space-y-5 rounded-2xl border border-border bg-surface p-6">
-                    <label v-if="selected === null && shop.custom_enabled" class="block text-sm">
-                        How many credits?
-                        <input
-                            v-model.number="quantity"
-                            type="number"
-                            min="1"
-                            max="100000"
-                            step="1"
-                            required
-                            class="field mt-2 w-full sm:max-w-xs"
-                        />
-                    </label>
-
+                <form @submit.prevent="buy" class="space-y-5 rounded-3xl border border-primary/20 bg-surface p-6 shadow-lg shadow-primary/10 lg:sticky lg:top-24">
+                    <div class="flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-xl text-accent-text">↗</span><div><p class="text-xs font-semibold uppercase tracking-widest text-accent-text">Secure checkout</p><h3 class="font-serif text-2xl text-content">PayMongo</h3></div></div>
                     <div
-                        v-if="count > 0 && (item || shop.custom_enabled)"
-                        class="flex flex-wrap justify-between gap-3 border-b border-border pb-4"
+                        v-if="count > 0 && item"
+                        class="rounded-2xl bg-accent-soft p-4"
                     >
-                        <span>{{ Number(count).toLocaleString() }} credits</span>
-                        <strong>{{ pesos(total) }} total</strong>
+                        <p class="text-sm text-muted">{{ item.name }} · {{ Number(count).toLocaleString() }} credits</p>
+                        <strong class="mt-1 block text-xl text-content">{{ pesos(total) }} total</strong>
                     </div>
 
                     <!-- Payment Methods Grid -->
                     <fieldset>
                         <legend class="mb-3 text-sm font-semibold">Payment method</legend>
-                        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="grid gap-3">
                             <label
                                 v-for="pay in paymentMethods"
                                 :key="pay.id"
@@ -178,7 +155,7 @@ const buy = () => {
                                 :class="pay.available ? 'cursor-pointer' : 'opacity-60'"
                             >
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="text-sm">{{ pay.name }}</span>
+                                    <span class="flex items-center gap-2 text-sm font-semibold"><img v-if="pay.id === 'paymongo'" src="https://cdn.prod.website-files.com/678878af11b661d623a19735/678878af11b661d623a19a81_PayMongo-Logo-Horizontal-MongoGreen-2025%403x.png" alt="PayMongo" class="h-5 w-auto max-w-28 object-contain" /> <span v-else>{{ pay.name }}</span></span>
                                     <input
                                         type="radio"
                                         name="payment-method"
@@ -188,7 +165,7 @@ const buy = () => {
                                     />
                                 </div>
                                 <p class="mt-2 text-xs text-muted">
-                                    {{ pay.available ? 'Test checkout' : 'Not connected yet' }}
+                                    {{ pay.available ? 'Cards and e-wallets at PayMongo checkout' : 'Not connected yet' }}
                                 </p>
                                 <p v-if="pay.minimum > shop.minimum_amount" class="mt-1 text-xs text-muted">
                                     Minimum {{ pesos(pay.minimum) }}
@@ -198,7 +175,7 @@ const buy = () => {
                     </fieldset>
 
                     <p v-if="!paymentMethods.some((p) => p.available)" class="text-sm text-muted">
-                        Online payment is being set up. An administrator can still add credits manually.
+                        Online payment is being set up. Please try again later.
                     </p>
 
                     <p
@@ -212,7 +189,7 @@ const buy = () => {
                         {{ e }}
                     </p>
 
-                    <button class="action w-full sm:w-auto" :disabled="!valid || form.processing">
+                    <button class="action w-full" :disabled="!valid || form.processing">
                         {{ form.processing ? 'Opening checkout…' : 'Continue to test payment' }}
                     </button>
 
@@ -220,6 +197,7 @@ const buy = () => {
                         Credits are added only after the payment provider confirms success.
                     </p>
                 </form>
+                </div>
             </section>
 
             <!-- Recent Purchases -->

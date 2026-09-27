@@ -16,8 +16,7 @@ class CreditShop {
             if (!$p) throw ValidationException::withMessages(['purchase'=>'This package is no longer available. Refresh the page.']);
             $quote=['package_id'=>$p->id,'label'=>$p->name,'credits'=>(int)$p->credits,'amount'=>(int)$p->amount];
         } else {
-            if (!$settings->custom_enabled || !$credits || $credits<1 || $credits>100000) throw ValidationException::withMessages(['credits'=>'Choose a valid number of credits.']);
-            $quote=['package_id'=>null,'label'=>'Custom credits','credits'=>$credits,'amount'=>$credits*$settings->price_per_credit];
+            throw ValidationException::withMessages(['package_id'=>'Choose one of the available credit packages.']);
         }
         if ($quote['amount']<max(100,$settings->minimum_amount) || $quote['amount']>10000000) throw ValidationException::withMessages(['purchase'=>'Purchase must meet the shop minimum and cannot exceed ₱100,000.']);
         return $quote;

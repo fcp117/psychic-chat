@@ -132,7 +132,16 @@ class ChatController extends Controller
     {
         $this->member($request,$chatSession);
         $s=$this->billing->settle($this->latest($chatSession)->id);
-        return Inertia::render('Chat/Room',['session'=>$this->publicSession($s,$request), 'conversationId'=>$s->conversationId(), 'initialMessages'=>$s->conversationMessages()->with('sender:id,name')->orderBy('id')->get(), 'currentUser'=>$request->user()->fresh()]);
+        $sessions = ChatSession::query()
+            ->where(fn ($query) => $query->where('client_id', $request->user()->id)->orWhere('counselor_id', $request->user()->id))
+            ->whereIn('id', ChatSession::selectRaw('MAX(id)')->groupBy('client_id', 'counselor_id'))
+            ->with(['client:id,name', 'counselor:id,name'])
+            ->latest('updated_at')->get();
+        $sessions->each(function ($item) use ($request) {
+            $item->setAttribute('conversation_id', $item->conversationId());
+            if ($request->user()->role === 'counselor') $item->makeHidden(['billed_units', 'billed_seconds']);
+        });
+        return Inertia::render('Chat/Room',['session'=>$this->publicSession($s,$request), 'sessions'=>$sessions, 'conversationId'=>$s->conversationId(), 'initialMessages'=>$s->conversationMessages()->with('sender:id,name')->orderBy('id')->get(), 'currentUser'=>$request->user()->fresh()]);
     }
 
     public function agreement(Request $request, ChatSession $chatSession) 

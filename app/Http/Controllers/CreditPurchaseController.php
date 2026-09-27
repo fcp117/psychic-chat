@@ -23,7 +23,7 @@ class CreditPurchaseController extends Controller {
     }
     public function checkout(Request $r) {
         abort_unless($r->user()->role==='user',403);
-        $v=$r->validate(['package_id'=>'nullable|integer','credits'=>'nullable|integer|min:1|max:100000','provider'=>'required|in:paypal,stripe,maya,gcash','request_key'=>'required|uuid','expected_amount'=>'required|integer|min:100|max:10000000','expected_credits'=>'required|integer|min:1|max:100000']);
+        $v=$r->validate(['package_id'=>'nullable|integer','credits'=>'nullable|integer|min:1|max:100000','provider'=>'required|in:paymongo','request_key'=>'required|uuid','expected_amount'=>'required|integer|min:100|max:10000000','expected_credits'=>'required|integer|min:1|max:100000']);
         if(!$this->gateway->ready($v['provider'])) throw ValidationException::withMessages(['provider'=>'This payment method is not configured yet.']);
         [$order,$new]=DB::transaction(function() use($r,$v) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
@@ -49,6 +49,16 @@ class CreditPurchaseController extends Controller {
         try { $paid=$this->payments->sync($purchase); }
         catch(\Throwable $e) { Log::warning('Payment verification deferred',['purchase'=>$purchase->id,'error_type'=>get_class($e)]); return response()->json(['message'=>'Payment could not be verified yet. Please check again shortly.'],503); }
         return response()->json(['paid'=>$paid,'status'=>$purchase->fresh()->status]);
+    }
+    public function cancel(Request $r,CreditPurchase $purchase) {
+        abort_unless($purchase->user_id===$r->user()->id,403);
+        abort_unless($purchase->status==='pending' && !$purchase->paid_at,422);
+        // Check PayMongo once before hiding this checkout. A payment that finishes later
+        // is still reconciled by the scheduler, so no customer payment is discarded.
+        try { if ($this->payments->sync($purchase)) return redirect()->route('credits.purchase',$purchase)->with('success','Payment was already confirmed and your credits are available.'); }
+        catch(\Throwable $e) { Log::warning('Payment cancellation verification deferred',['purchase'=>$purchase->id,'error_type'=>get_class($e)]); return back()->with('payment_error','We could not confirm the checkout status. Please try again shortly.'); }
+        $purchase->fresh()->update(['status'=>'cancelled','checked_at'=>now()]);
+        return redirect()->route('credits.purchase',$purchase)->with('success','Checkout cancelled. If a payment was already completed with PayMongo, credits will still be added after verification.');
     }
     public function webhook(Request $r,string $provider) {
         $id=$this->gateway->webhookOrder($r,$provider);

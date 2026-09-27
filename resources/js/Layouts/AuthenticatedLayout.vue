@@ -6,7 +6,6 @@ import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
@@ -27,13 +26,11 @@ const showingNavigationDropdown = ref(false);
 <template>
     <div>
         <div class="app-shell min-h-screen bg-page">
-            <nav
-                class="border-b border-border bg-surface "
-            >
+            <nav class="sticky top-0 z-50 bg-transparent px-3 py-4 sm:px-5" aria-label="Main navigation">
                 <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 lg:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
+                <div class="mx-auto max-w-7xl">
+                    <div class="relative flex min-h-14 items-center justify-between rounded-2xl border border-border bg-surface px-4 shadow-lg shadow-primary/10 sm:px-5">
+                        <div class="flex shrink-0">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
                                 <Link :href="route('home')" class="flex items-center gap-2" aria-label="Intuition Island home">
@@ -45,15 +42,12 @@ const showingNavigationDropdown = ref(false);
                             </div>
 
                             <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-5 lg:-my-px lg:ms-6 lg:flex"
-                            >
-                                <NavLink v-for="item in navigation" :key="item.route" :href="route(item.route)" :active="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*'))">{{ item.label }}</NavLink>
+                            <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
+                                <Link v-for="item in navigation" :key="item.route" :href="route(item.route)" class="rounded-full px-3 py-2 text-sm font-medium transition" :class="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*')) ? 'bg-accent-soft text-accent-text' : 'text-muted hover:bg-surface-hover hover:text-content'">{{ item.label }}</Link>
                             </div>
                         </div>
 
-                        <div class="ml-auto mr-3 flex shrink-0 items-center gap-3 lg:mr-0 lg:pl-4">
-                            <Link v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')" class="hidden rounded-full border border-primary px-3 py-2 text-xs font-semibold text-accent-text hover:bg-accent-soft xl:block">Become a Counselor</Link>
+                        <div class="ml-auto mr-2 flex shrink-0 items-center gap-3 lg:mr-0 lg:pl-4">
                             <NotificationCenter />
                         </div>
                         <div class="hidden lg:ms-3 lg:flex lg:items-center">
@@ -85,7 +79,7 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
-                                        <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Counselor</DropdownLink>
+                                        <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Advisor</DropdownLink>
                                         <DropdownLink
                                             :href="route('profile.edit')"
                                         >
@@ -177,10 +171,12 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Counselor</ResponsiveNavLink>
+                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Advisor</ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('profile.edit')">
                                 Profile
                             </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('terms')">Terms of Service</ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('privacy')">Privacy Notice</ResponsiveNavLink>
                             <ResponsiveNavLink
                                 :href="route('logout')"
                                 method="post"

@@ -1,9 +1,11 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ChatTabs from '@/Components/ChatTabs.vue';
 import Modal from '@/Components/Modal.vue';
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
 import axios from 'axios';
-const props = defineProps({ session: Object, conversationId: Number, initialMessages: Array, currentUser: Object });
+const props = defineProps({ session: Object, sessions: Array, conversationId: Number, initialMessages: Array, currentUser: Object });
 const session = ref(props.session), balance = ref(props.currentUser.available_credits);
 const messages = ref([...props.initialMessages]), newMessage = ref(''), sending = ref(false);
 const online=ref(navigator.onLine),connectedOnce=ref(false),socketState=ref('connecting');
@@ -15,6 +17,9 @@ const agreement = ref(null), showAgreement = ref(false), loadingAgreement = ref(
 const request = useForm({accepted_rate: 0, consent: true, hide_notice: false});
 const isCounselor = computed(() => props.currentUser.id === session.value.counselor_id);
 const partner = computed(() => isCounselor.value ? session.value.client : session.value.counselor);
+const sessionPartner = item => item.client_id === props.currentUser.id ? item.counselor : item.client;
+const initials = item => (sessionPartner(item)?.name || 'I').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+const statusLabel = status => status === 'active' ? 'Active now' : status === 'pending' ? 'Request pending' : 'Conversation ended';
 const live = computed(() => session.value.status === 'active');
 const pending = computed(() => session.value.status === 'pending');
 const now = ref(Date.now()); let serverOffset = 0;
@@ -78,7 +83,15 @@ const send = async () => {
 </script>
 <template>
     <Head :title="partner?.name || 'Conversation'" />
-    <main class="mx-auto flex h-[100dvh] max-w-4xl flex-col gap-3 px-3 py-3 sm:px-6 sm:py-5">
+    <AuthenticatedLayout>
+    <main class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
+        <div class="grid min-h-[calc(100svh-8.5rem)] overflow-hidden rounded-3xl border border-border bg-surface shadow-xl shadow-primary/10 lg:grid-cols-[22rem_minmax(0,1fr)]">
+            <aside class="flex min-h-0 flex-col border-b border-border bg-page/60 lg:border-b-0 lg:border-r">
+                <div class="border-b border-border px-5 py-5"><div class="flex items-center justify-between gap-3"><div><p class="text-xs font-semibold uppercase tracking-[0.22em] text-accent-text">Messages</p><h1 class="mt-1 font-serif text-2xl text-content">Your conversations</h1></div><Link :href="route('chat.index')" class="rounded-full p-2 text-accent-text hover:bg-accent-soft" aria-label="Refresh conversations" title="All conversations">↻</Link></div><ChatTabs /></div>
+                <p class="px-5 py-3 text-xs leading-5 text-muted">Pending requests wait for spiritual advisor acceptance before billing starts.</p>
+                <div class="min-h-0 flex-1 overflow-y-auto px-2 pb-3"><Link v-for="item in sessions" :key="item.id" :href="route('chat.room', item.conversation_id)" class="group flex items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-accent-soft focus-visible:bg-accent-soft" :class="item.conversation_id === conversationId ? 'bg-accent-soft ring-1 ring-primary/20' : ''"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-accent-text">{{ initials(item) }}</span><span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-content">{{ sessionPartner(item)?.name || 'Your reading' }}</span><span class="mt-1 block truncate text-xs" :class="item.status === 'active' ? 'text-success' : 'text-muted'">{{ statusLabel(item.status) }}</span></span><span class="text-lg text-muted transition group-hover:translate-x-0.5 group-hover:text-accent-text" aria-hidden="true">›</span></Link></div>
+            </aside>
+            <section class="flex min-h-[32rem] min-w-0 flex-col bg-gradient-to-br from-page via-surface to-accent-soft/40 p-3 sm:p-5">
         <header class="shrink-0 rounded-2xl border border-border bg-surface p-4">
             <Link :href="route('chat.index')" class="text-xs text-accent-text">← Conversations</Link>
             <div class="mt-2 flex flex-wrap items-center justify-between gap-2"><h1 class="font-serif text-xl sm:text-2xl">{{ partner?.name || 'Your conversation' }}</h1><span class="rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-text">{{ live ? 'Reading active' : pending ? 'Request pending' : 'Reading inactive' }}</span></div>
@@ -97,6 +110,9 @@ const send = async () => {
             <form @submit.prevent="send" class="flex gap-2"><label for="message" class="sr-only">Message</label><input id="message" v-model="newMessage" maxlength="4000" :disabled="sending || !live" class="field min-w-0 flex-1" :placeholder="live ? 'Message…' : pending ? 'Waiting for acceptance…' : 'Request to continue…'" /><button class="action !px-4" :disabled="sending || !newMessage.trim() || !live">Send</button></form>
             <p v-if="error" role="alert" class="mt-2 text-xs text-error">{{ error }} <button v-if="newMessage.trim()" type="button" class="ml-2 font-semibold underline" :disabled="sending || !online" @click="send">{{ sending ? 'Retrying…' : 'Retry message' }}</button></p><p v-for="e in {...action.errors,...request.errors}" :key="e" role="alert" class="mt-2 text-xs text-error">{{ e }}</p>
         </footer>
-        <Modal :show="showAgreement" :closeable="!request.processing" @close="showAgreement=false"><form @submit.prevent="submitRequest" class="space-y-5 p-6"><h2 class="font-serif text-2xl">Continue with {{ partner?.name }}</h2><p class="rounded-xl bg-accent-soft p-4 text-accent-text">{{ agreement?.rate }} credits / hour</p><p class="text-sm leading-6 text-muted">Charging begins only after counselor acceptance. Your previous messages stay in this conversation. A {{ agreement?.disconnect_seconds }}-second period without interaction or connection ends the reading; unconfirmed time is not charged.</p><label class="flex gap-3 text-sm"><input v-model="request.hide_notice" type="checkbox" /> Don’t show again for this counselor at this rate.</label><p v-for="e in request.errors" :key="e" class="text-error">{{ e }}</p><div class="flex flex-wrap gap-3"><button type="button" class="text-muted" :disabled="request.processing" @click="showAgreement=false">Cancel</button><button class="action" :disabled="request.processing">Agree & request to continue</button></div></form></Modal>
+        <Modal :show="showAgreement" :closeable="!request.processing" @close="showAgreement=false"><form @submit.prevent="submitRequest" class="space-y-5 p-6"><h2 class="font-serif text-2xl">Continue with {{ partner?.name }}</h2><p class="rounded-xl bg-accent-soft p-4 text-accent-text">{{ agreement?.rate }} credits / hour</p><p class="text-sm leading-6 text-muted">Charging begins only after spiritual advisor acceptance. Your previous messages stay in this conversation. A {{ agreement?.disconnect_seconds }}-second period without interaction or connection ends the reading; unconfirmed time is not charged.</p><label class="flex gap-3 text-sm"><input v-model="request.hide_notice" type="checkbox" /> Don’t show again for this spiritual advisor at this rate.</label><p v-for="e in request.errors" :key="e" class="text-error">{{ e }}</p><div class="flex flex-wrap gap-3"><button type="button" class="text-muted" :disabled="request.processing" @click="showAgreement=false">Cancel</button><button class="action" :disabled="request.processing">Agree & request to continue</button></div></form></Modal>
+            </section>
+        </div>
     </main>
+    </AuthenticatedLayout>
 </template>

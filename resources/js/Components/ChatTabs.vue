@@ -8,6 +8,6 @@ import { Link } from '@inertiajs/vue3';
             class="rounded-full border border-border px-6 py-3 text-sm font-semibold">Chat</Link>
         <Link :href="route('psychics.index')" :aria-current="route().current('psychics.index') ? 'page' : undefined"
             :class="route().current('psychics.index') ? 'bg-primary text-on-primary' : 'bg-surface text-content hover:bg-surface-hover'"
-            class="rounded-full border border-border px-6 py-3 text-sm font-semibold">Find a Counselor</Link>
+            class="rounded-full border border-border px-6 py-3 text-sm font-semibold">Find a Spiritual Advisor</Link>
     </nav>
 </template>

@@ -6,7 +6,7 @@ Staging is a production-like safety check, not a place for real payments or pers
 
 Set `APP_ENV=staging`, `APP_DEBUG=false`, a unique `APP_KEY`, an HTTPS `APP_URL`, `DB_CONNECTION=mysql`, `QUEUE_CONNECTION=database`, `CACHE_STORE=database`, and `SESSION_SECURE_COOKIE=true`.
 
-Set `MAIL_MAILER=resend` only after the staging sending domain is verified. Keep `STRIPE_ENABLED=false`, `PAYPAL_ENABLED=false`, `MAYA_ENABLED=false`, and `GCASH_ENABLED=false`: this release intentionally blocks all sandbox checkout in production and should not be used for real money.
+Set `MAIL_MAILER=resend` only after the staging sending domain is verified. PayMongo test checkout may be enabled only with `PAYMONGO_ENABLED=true`, test credentials, and a signed test webhook. It is deliberately blocked in production and must not be used for real money.
 
 For Reverb behind HTTPS, use `REVERB_SCHEME=https`, port `443`, and the public staging hostname for both `REVERB_HOST` and `VITE_REVERB_HOST`. Set `REVERB_ALLOWED_ORIGINS=https://your-staging-domain`; production intentionally accepts no WebSocket origin until this is set.
 

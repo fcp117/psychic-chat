@@ -17,6 +17,8 @@ class EmailVerificationCodes {
                 throw ValidationException::withMessages(['code'=>'Please wait 60 seconds before requesting another code.']);
             if(!app()->environment('testing') && in_array(config('mail.default'),['log','array','failover']))
                 throw ValidationException::withMessages(['code'=>'Email delivery is not configured yet. Please contact the administrator.']);
+            if(!app()->environment('testing') && config('mail.default')==='resend' && blank(config('services.resend.key')))
+                throw ValidationException::withMessages(['code'=>'Email delivery is not configured yet. Please contact the administrator.']);
             if(!app()->environment('testing') && config('mail.default')==='smtp' && (!config('mail.mailers.smtp.username') || !config('mail.mailers.smtp.password')))
                 throw ValidationException::withMessages(['code'=>'Email delivery is not configured yet. Please contact the administrator.']);
             $code=str_pad((string)random_int(0,999999),6,'0',STR_PAD_LEFT);
