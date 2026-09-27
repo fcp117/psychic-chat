@@ -10,11 +10,18 @@ Route::get('/', function () {
     return Inertia::render(request()->user() ? 'Dashboard' : 'Welcome');
 })->name('home');
 
+Route::get('/about', fn () => Inertia::render('About'))->name('about');
+Route::get('/terms', fn () => Inertia::render('Legal', ['document' => 'terms']))->name('terms');
+Route::get('/privacy', fn () => Inertia::render('Legal', ['document' => 'privacy']))->name('privacy');
+Route::get('/refunds', fn () => Inertia::render('Legal', ['document' => 'refunds']))->name('refunds');
+Route::get('/service-disclaimer', fn () => Inertia::render('Legal', ['document' => 'disclaimer']))->name('service.disclaimer');
+
 // Keep existing dashboard links and authentication redirects compatible.
 Route::get('/dashboard', fn () => redirect()->route('home'))
     ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/assistant/respond', [\App\Http\Controllers\AssistantController::class, 'respond'])->middleware('throttle:8,1')->name('assistant.respond');
     Route::get('/chat', function (\Illuminate\Http\Request $request) {
         app(\App\Services\ReadingBilling::class)->sweep();
         $sessions = \App\Models\ChatSession::query()

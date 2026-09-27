@@ -6,11 +6,11 @@ import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import RecoveryNotice from './Components/RecoveryNotice.vue';
-import SiteAssistant from './Components/SiteAssistant.vue';
+import SiteAssistant from './Components/CorpusAssistant.vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const configuredName = import.meta.env.VITE_APP_NAME;
-const appName = configuredName && configuredName !== 'Laravel' ? configuredName : 'Psychic Chat';
+const appName = configuredName && configuredName !== 'Laravel' ? configuredName : 'Intuition Island';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

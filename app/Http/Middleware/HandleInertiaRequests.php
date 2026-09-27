@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -34,6 +35,13 @@ class HandleInertiaRequests extends Middleware
             'flash' => ['success' => fn () => $request->session()->get('success'), 'error' => fn () => $request->session()->get('error')],
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'assistant' => [
+                'enabled' => (bool) config('assistant.enabled') && filled(config('services.together.key')),
+                'usage' => $request->user() ? [
+                    'website' => ['used' => RateLimiter::attempts('assistant:website:daily:'.$request->user()->id), 'limit' => 25],
+                    'library' => ['used' => RateLimiter::attempts('assistant:library:daily:'.$request->user()->id), 'limit' => 5],
+                ] : null,
             ],
         ];
     }

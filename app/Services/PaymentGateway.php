@@ -14,6 +14,9 @@ class PaymentGateway {
         ])->values()->all();
     }
     public function ready(string $provider): bool {
+        // This application currently supports sandbox payment credentials only.
+        // Never expose a checkout in production until a reviewed live-payment release exists.
+        if (app()->environment('production')) return false;
         if(!config('payments.'.$provider.'.enabled')) return false;
         return match($provider) {
             'gcash'=>app(GcashGateway::class)->ready(),
@@ -43,7 +46,7 @@ class PaymentGateway {
             $id=$data['id']??null; $url=$data['url']??null;
         } elseif($order->provider==='paypal') {
             $data=$this->paypal()->withHeaders(['PayPal-Request-Id'=>$order->id])->post(self::PAYPAL.'/v2/checkout/orders',[
-                'intent'=>'CAPTURE','purchase_units'=>[['reference_id'=>$order->id,'custom_id'=>$order->id,'description'=>$order->credits.' Psychic Chat credits','amount'=>['currency_code'=>'PHP','value'=>$this->amount($order->amount)]]],
+                'intent'=>'CAPTURE','purchase_units'=>[['reference_id'=>$order->id,'custom_id'=>$order->id,'description'=>$order->credits.' Intuition Island credits','amount'=>['currency_code'=>'PHP','value'=>$this->amount($order->amount)]]],
                 'payment_source'=>['paypal'=>['experience_context'=>['return_url'=>$return,'cancel_url'=>$return.'?cancelled=1','user_action'=>'PAY_NOW','shipping_preference'=>'NO_SHIPPING']]],
             ])->throw()->json();
             $id=$data['id']??null; $url=collect($data['links']??[])->first(fn($l)=>in_array($l['rel']??'',['payer-action','approve']))['href']??null;

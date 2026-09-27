@@ -8,7 +8,7 @@ Only one application per account is stored. Pending applications cannot be dupli
 
 Admin Settings > Counselor Applications lists pending reviews first. An admin selects approve or decline, supplies feedback, and confirms. Applicants receive an in-app notification. No approval emails or external messages are sent. Users cannot review applications or assign themselves roles.
 
-Counselor profile links appear in Find Psychic. Profiles contain public application fields only; legacy counselors without an application show a clear introduction placeholder. Applications do not collect identity documents, payment details, or uploads. Availability is descriptive, not a booking calendar. Approval is an administrative decision, not a claim of verified professional licensing.
+Counselor profile links appear in Find a Counselor. Profiles contain public application fields only; legacy counselors without an application show a clear introduction placeholder. Applications do not collect identity documents, payment details, or uploads. Availability is descriptive, not a booking calendar. Approval is an administrative decision, not a claim of verified professional licensing.
 
 ## Recovery features
 

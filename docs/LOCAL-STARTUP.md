@@ -1,4 +1,4 @@
-# Starting Psychic Chat locally
+# Starting Intuition Island locally
 
 After the initial environment, database, PHP and npm dependency setup:
 
@@ -10,6 +10,8 @@ cd C:\Git\psychic-chat
 Alternatively, run `npm start` in the project directory (also works on other operating systems).
 
 The launcher builds the frontend, then runs the website on http://127.0.0.1:8000, Reverb using the existing environment configuration, a queue worker, and the scheduler in one terminal. The scheduler handles reading settlement/disconnects and pending payment reconciliation. Keep the terminal open. Press Ctrl+C to stop; if Windows asks to terminate the batch job, answer Y. If a service exits, the other services stop too. Resolve the reported error before restarting.
+
+The Library Guide uses the prebuilt, closed corpus in `rag/corpus.json` and sends only retrieved excerpts to Together AI. Add `TOGETHER_API_KEY` privately to `.env`, then set `ASSISTANT_ENABLED=true`. Never expose that key to frontend code or commit it. Rebuild `rag/corpus.json` from source PDFs only when the corpus changes.
 
 Stop previously running copies first to avoid occupied ports or duplicate workers. The launcher does not install dependencies, migrate the database, change secrets, or reset data. This is a development launcher, not a production deployment service.
 

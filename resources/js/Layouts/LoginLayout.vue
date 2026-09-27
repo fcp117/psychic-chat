@@ -4,7 +4,7 @@ import { Link } from '@inertiajs/vue3';
 
 defineProps({
     title: { type: String, default: 'Welcome back' },
-    description: { type: String, default: 'Log in to continue your journey with Psychic Chat.' },
+    description: { type: String, default: 'Log in to continue your journey with Intuition Island.' },
     wide: { type: Boolean, default: false },
 });
 </script>
@@ -14,9 +14,9 @@ defineProps({
         <div class="hero-shade pointer-events-none absolute inset-0 -z-10" aria-hidden="true"></div>
         <header class="w-full">
             <div class="mx-auto flex h-20 max-w-7xl items-center px-5 sm:px-8">
-                <Link href="/" class="flex items-center gap-2 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" aria-label="Psychic Chat home">
+                <Link href="/" class="flex items-center gap-2 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" aria-label="Intuition Island home">
                     <ApplicationLogo class="block h-8 w-8 text-primary" />
-                    <span class="font-serif text-lg tracking-wide text-content">Psychic Chat</span>
+                    <span class="font-serif text-lg tracking-wide text-content">Intuition Island</span>
                 </Link>
             </div>
         </header>
@@ -28,6 +28,6 @@ defineProps({
                 <slot />
             </section>
         </main>
-        <footer class="px-5 py-5 text-center text-xs text-muted">Psychic Chat · Space for reflection and connection.</footer>
+        <footer class="px-5 py-5 text-center text-xs text-muted">Intuition Island · Space for reflection and connection.</footer>
     </div>
 </template>

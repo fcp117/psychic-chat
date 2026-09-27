@@ -23,7 +23,7 @@ if not exist .env (
     echo The .env file is missing. Complete the project environment setup first.
     exit /b 1
 )
-echo Starting Psychic Chat at http://127.0.0.1:8000 after the frontend build.
+echo Starting Intuition Island at http://127.0.0.1:8000 after the frontend build.
 echo Keep this terminal open. Press Ctrl+C to stop the services.
 echo Close any previously running project services before starting.
 call npm start

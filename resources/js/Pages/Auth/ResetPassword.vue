@@ -33,7 +33,7 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout title="A fresh start" description="Choose a new password to secure your Psychic Chat account.">
+    <GuestLayout title="A fresh start" description="Choose a new password to secure your Intuition Island account.">
         <Head title="Reset Password" />
 
         <form @submit.prevent="submit">

@@ -30,13 +30,13 @@ const paths = [
             <div class="mb-9 flex items-center gap-4"><span class="text-accent-text" aria-hidden="true">✧</span><h2 class="font-serif text-3xl text-content">Make this moment yours</h2></div>
             <div class="grid gap-5 md:grid-cols-3">
                 <article v-for="item in paths" :key="item.route" class="rounded-2xl border border-border bg-surface p-7">
-                    <p class="mb-8 text-xs tracking-widest text-muted">{{ item.number }} / PSYCHIC CHAT</p>
+                    <p class="mb-8 text-xs tracking-widest text-muted">{{ item.number }} / INTUITION ISLAND</p>
                     <h3 class="font-serif text-2xl text-content">{{ item.title }}</h3>
                     <p class="mb-7 mt-3 text-sm leading-6 text-muted">{{ item.text }}</p>
                     <Link :href="route(item.route)" class="text-sm font-semibold text-accent-text hover:underline">{{ item.label }} <span aria-hidden="true">→</span></Link>
                 </article>
             </div>
         </section>
-        <footer class="border-t border-border px-6 py-6 text-center text-xs text-muted">Psychic Chat · Space for reflection and connection.</footer>
+        <footer class="border-t border-border px-6 py-6 text-center text-xs text-muted">Intuition Island · Space for reflection and connection.</footer>
     </AuthenticatedLayout>
 </template>

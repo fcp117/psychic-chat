@@ -16,6 +16,7 @@ const navigation = computed(() => [
     { label: 'Chat', route: 'chat.index', match: 'chat.*' },
     { label: 'Forecast', route: 'forecast', match: 'forecast' },
     { label: 'Credits', route: 'credits', match: 'credits' },
+    { label: 'About', route: 'about', match: 'about' },
     ...(page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings', match: 'earnings' }] : []),
     ...(page.props.auth.user.role === 'admin' ? [{ label: 'Admin Settings', route: 'admin.settings', match: 'admin.*' }] : []),
 ]);
@@ -35,11 +36,11 @@ const showingNavigationDropdown = ref(false);
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('home')" class="flex items-center gap-2" aria-label="Psychic Chat home">
+                                <Link :href="route('home')" class="flex items-center gap-2" aria-label="Intuition Island home">
                                     <ApplicationLogo
                                         class="block h-8 w-8 text-primary"
                                     />
-                                    <span class="font-serif text-lg tracking-wide text-content">Psychic Chat</span>
+                                    <span class="font-serif text-lg tracking-wide text-content">Intuition Island</span>
                                 </Link>
                             </div>
 
@@ -90,6 +91,8 @@ const showingNavigationDropdown = ref(false);
                                         >
                                             Profile
                                         </DropdownLink>
+                                        <DropdownLink :href="route('terms')">Terms of Service</DropdownLink>
+                                        <DropdownLink :href="route('privacy')">Privacy Notice</DropdownLink>
                                         <DropdownLink
                                             :href="route('logout')"
                                             method="post"

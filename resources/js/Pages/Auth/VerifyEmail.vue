@@ -45,7 +45,7 @@ const sendAgain = () => {
 
 <template>
     <Head title="Verify your email" />
-    <LoginLayout title="One last step" description="Verify your email to begin your journey with Psychic Chat.">
+    <LoginLayout title="One last step" description="Verify your email to begin your journey with Intuition Island.">
         <div class="mb-7 flex items-start gap-3 rounded-2xl bg-accent-soft p-4">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-accent-text" aria-hidden="true">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m4 7 8 6 8-6" /></svg>

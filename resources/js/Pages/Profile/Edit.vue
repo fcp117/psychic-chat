@@ -17,7 +17,7 @@ const initials = computed(() => user.value.name.split(/\s+/).filter(Boolean).sli
         <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-accent-text">Your account</p>
             <h1 class="mt-3 font-serif text-4xl text-content">Make yourself at home.</h1>
-            <p class="mt-4 max-w-xl leading-7 text-muted">Manage your details, keep your account secure, and make Psychic Chat your own.</p>
+            <p class="mt-4 max-w-xl leading-7 text-muted">Manage your details, keep your account secure, and make Intuition Island your own.</p>
             <div class="mt-9 grid items-start gap-7 lg:grid-cols-[17rem_minmax(0,1fr)]">
                 <aside class="rounded-3xl border border-border bg-surface p-6 shadow-sm">
                     <UserAvatar :user="user" class="h-16 w-16 text-2xl" />
