@@ -34,6 +34,21 @@ try {
     rejected(fn()=>$gateway->webhookOrder($request, 'paymongo'), 'unsigned PayMongo callback is rejected');
     $time=time(); $request->headers->set('Paymongo-Signature','t='.$time.',te='.hash_hmac('sha256',$time.'.'.$body,'paymongo-signing'));
     check($gateway->webhookOrder($request, 'paymongo') === 'cs_fixture', 'signed PayMongo callback resolves checkout');
-    $original=$app['env']; $app['env']='production'; check(!$gateway->ready('paymongo'), 'sandbox checkout is blocked in production'); $app['env']=$original;
+    $original=$app['env']; $app['env']='production';
+    config(['payments.paymongo.allow_sandbox_in_production'=>false]);
+    check(!$gateway->ready('paymongo'), 'sandbox checkout is blocked in production by default');
+    config(['payments.paymongo.allow_sandbox_in_production'=>true]);
+    check($gateway->ready('paymongo'), 'production demo explicitly allows sandbox checkout');
+    check($gateway->methods()[0]['available'], 'sandbox payment method is available in the deployed demo');
+    fakePaymongo(['data'=>['id'=>'cs_fixture','attributes'=>['livemode'=>false,'checkout_url'=>'https://checkout.paymongo.com/cs_fixture']]]);
+    check($gateway->create($order)['status'] === 'pending', 'production demo creates a sandbox checkout');
+    check($gateway->webhookOrder($request, 'paymongo') === 'cs_fixture', 'production demo accepts signed sandbox callbacks');
+    fakePaymongo($good);
+    check($gateway->paid($order), 'production demo verifies sandbox payments');
+    config(['payments.paymongo.secret'=>'sk_live_fixture']);
+    check(!$gateway->ready('paymongo'), 'live keys remain blocked with production sandbox enabled');
+    config(['payments.paymongo.secret'=>'sk_test_fixture', 'payments.paymongo.enabled'=>false]);
+    check(!$gateway->ready('paymongo'), 'master payment switch still disables sandbox checkout');
+    $app['env']=$original;
     echo "ALL PAYMONGO PAYMENT CHECKS PASSED (no network calls, no live data)\n";
 } finally { Illuminate\Support\Facades\DB::disconnect('sqlite'); if (is_file($db)) unlink($db); }

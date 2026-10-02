@@ -21,8 +21,11 @@ class PaymentGateway
 
     public function ready(string $provider): bool
     {
-        // Test credentials only. A separate reviewed release must opt into live payments.
-        return !app()->environment('production') && $provider === 'paymongo' && app(PaymongoGateway::class)->ready();
+        // Deployed demos must explicitly opt in; live credentials remain rejected.
+        $sandboxAllowed = !app()->environment('production')
+            || (bool) config('payments.paymongo.allow_sandbox_in_production', false);
+
+        return $sandboxAllowed && $provider === 'paymongo' && app(PaymongoGateway::class)->ready();
     }
 
     public function create(CreditPurchase $order): array
