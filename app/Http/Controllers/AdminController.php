@@ -17,6 +17,7 @@ class AdminController extends Controller {
         $this->billing->sweep();
         $v=$request->validate(['q'=>'nullable|string|max:100','verification'=>['nullable',Rule::in(['all','verified','unverified'])],'section'=>['nullable',Rule::in(['users','pricing','transactions','sessions','forecasts','audit','applications','health'])]]);
         $verification=$v['verification'] ?? 'all'; $q=trim($v['q'] ?? ''); $section=$v['section'] ?? 'users';
+        abort_if($section === 'forecasts' && !config('features.forecast'), 404);
         $data=['section'=>$section,'filters'=>['q'=>$q,'verification'=>$verification],'settings'=>$this->billing->settings()];
         if ($section==='applications') $data['applications']=DB::table('counselor_applications as a')->join('users as u','u.id','=','a.user_id')->select('a.*','u.name','u.email')->orderByRaw("CASE WHEN a.status='pending' THEN 0 ELSE 1 END")->orderByDesc('a.updated_at')->paginate(15)->withQueryString();
         if ($section==='health') $data['incidents']=DB::table('system_incidents')->orderByDesc('created_at')->paginate(30)->withQueryString();
@@ -108,6 +109,7 @@ class AdminController extends Controller {
         return back()->with('success','Reading ended.');
     }
     public function deleteForecast(Request $r, int $forecast) {
+        abort_unless(config('features.forecast'), 404);
         DB::transaction(function () use ($r,$forecast) {
             $old=DB::table('forecasts')->where('id',$forecast)->lockForUpdate()->first();
             abort_unless($old,404);
@@ -117,6 +119,7 @@ class AdminController extends Controller {
         return redirect()->route('admin.settings',['section'=>'forecasts'])->with('success','Forecast deleted.');
     }
     public function forecast(Request $r) {
+        abort_unless(config('features.forecast'), 404);
         $v=$r->validate(['id'=>'nullable|integer|exists:forecasts,id','title'=>'required|string|max:200','body'=>'required|string|max:20000','published_at'=>'nullable|date']);
         DB::transaction(function () use ($r,$v) {
             $id=$v['id'] ?? null; unset($v['id']);

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import UserAvatar from '@/Components/UserAvatar.vue';
+import PageBackdrop from '@/Components/PageBackdrop.vue';
 import NotificationCenter from '@/Components/NotificationCenter.vue';
 import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
@@ -13,7 +14,7 @@ const page = usePage();
 const navigation = computed(() => [
     { label: 'Home', route: 'home', match: 'home' },
     { label: 'Chat', route: 'chat.index', match: 'chat.*' },
-    { label: 'Forecast', route: 'forecast', match: 'forecast' },
+    ...(page.props.features?.forecast ? [{ label: 'Forecast', route: 'forecast', match: 'forecast' }] : []),
     { label: 'Credits', route: 'credits', match: 'credits' },
     { label: 'About', route: 'about', match: 'about' },
     ...(page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings', match: 'earnings' }] : []),
@@ -25,7 +26,8 @@ const showingNavigationDropdown = ref(false);
 
 <template>
     <div>
-        <div class="app-shell min-h-screen bg-page">
+        <div class="app-shell relative isolate min-h-screen" :class="page.component === 'Dashboard' ? 'bg-page' : 'shared-portrait-shell'">
+            <PageBackdrop v-if="page.component !== 'Dashboard'" />
             <nav class="sticky top-0 z-50 bg-transparent px-3 py-4 sm:px-5" aria-label="Main navigation">
                 <!-- Primary Navigation Menu -->
                 <div class="mx-auto max-w-7xl">
@@ -79,7 +81,7 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
-                                        <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Advisor</DropdownLink>
+                                        <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Coach</DropdownLink>
                                         <DropdownLink
                                             :href="route('profile.edit')"
                                         >
@@ -171,7 +173,7 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Advisor</ResponsiveNavLink>
+                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Coach</ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('profile.edit')">
                                 Profile
                             </ResponsiveNavLink>

@@ -23,7 +23,7 @@ class CounselorApplicationController extends Controller {
    if($old) {DB::table('counselor_applications')->where('id',$old->id)->update($data);$id=$old->id;}
    else $id=DB::table('counselor_applications')->insertGetId($data+['user_id'=>$u->id,'created_at'=>now()]);
    $audit=DB::table('admin_audits')->insertGetId(['actor_id'=>$u->id,'action'=>'counselor.application_submitted','target'=>'application:'.$id,'before'=>null,'after'=>json_encode(['status'=>'pending']),'created_at'=>now(),'updated_at'=>now()]);
-   foreach(User::where('role','admin')->where('is_suspended',false)->pluck('id') as $admin) AppNotifications::send($admin,'application:'.$id.':'.$audit,'Spiritual Advisor application received',$u->name.' has submitted an application.',route('admin.settings',['section'=>'applications'],false));
+   foreach(User::where('role','admin')->where('is_suspended',false)->pluck('id') as $admin) AppNotifications::send($admin,'application:'.$id.':'.$audit,'Spiritual Coach application received',$u->name.' has submitted an application.',route('admin.settings',['section'=>'applications'],false));
   });
   return back()->with('success','Application submitted. An administrator will review it.');
  }
@@ -36,14 +36,14 @@ class CounselorApplicationController extends Controller {
    $old=DB::table('counselor_applications')->where('id',$ref->id)->lockForUpdate()->first();
    if($old->status!=='pending') throw ValidationException::withMessages(['decision'=>'This application has already been reviewed. Refresh the list.']);
    if($v['decision']==='approved') {
-    if($u->role!=='user'||$u->is_suspended||!$u->hasVerifiedEmail()) throw ValidationException::withMessages(['decision'=>'Only an active, verified User account can become a spiritual advisor.']);
+    if($u->role!=='user'||$u->is_suspended||!$u->hasVerifiedEmail()) throw ValidationException::withMessages(['decision'=>'Only an active, verified User account can become a spiritual coach.']);
     if(ChatSession::where(fn($q)=>$q->where('client_id',$u->id)->orWhere('counselor_id',$u->id))->whereIn('status',['pending','active'])->exists()) throw ValidationException::withMessages(['decision'=>'End or cancel this user’s open readings before approving.']);
     $u->forceFill(['role'=>'counselor','is_approved'=>true,'rate_per_hour'=>$v['rate_per_hour']??null])->save();
    }
    $data=['status'=>$v['decision'],'review_note'=>$v['review_note'],'reviewed_by'=>$r->user()->id,'reviewed_at'=>now(),'updated_at'=>now()];
    DB::table('counselor_applications')->where('id',$old->id)->update($data);
    $audit=DB::table('admin_audits')->insertGetId(['actor_id'=>$r->user()->id,'action'=>'counselor.application_'.$v['decision'],'target'=>'application:'.$old->id,'before'=>json_encode(['status'=>$old->status]),'after'=>json_encode($data+['rate_per_hour'=>$v['rate_per_hour']??null]),'created_at'=>now(),'updated_at'=>now()]);
-   AppNotifications::send($u->id,'application:'.$old->id.':'.$audit,'Spiritual Advisor application '.$v['decision'],$v['review_note'],route('counselor.apply',[],false));
+   AppNotifications::send($u->id,'application:'.$old->id.':'.$audit,'Spiritual Coach application '.$v['decision'],$v['review_note'],route('counselor.apply',[],false));
   });
   return back()->with('success','Application reviewed. The applicant has been notified.');
  }

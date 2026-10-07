@@ -31,7 +31,7 @@ class ReadingBilling {
         ]);
     }
     // Call while the user and session rows are locked inside a transaction.
-    public function settleLocked(ChatSession $session, User $client, bool $explicitEnd = false): void {
+    public function settleLocked(ChatSession $session, User $client, bool $explicitEnd = false, ?string $reason = null): void {
         if ($session->status !== 'active' || $session->agreed_rate === null) return;
         $now = now()->timestamp;
         $start = $session->started_at->timestamp;
@@ -57,17 +57,17 @@ class ReadingBilling {
         if ($client->credit_units <= max(3600, $session->agreed_rate * 60)) AppNotifications::send($client->id,'low-balance:'.$session->id,'Your reading balance is low','Review your remaining credits before continuing.',route('credits',[],false));
         if ($session->status === 'completed') {
             $this->notice($session, $session->end_reason === 'disconnected'
-                ? 'This reading ended because a participant was inactive. Request to continue whenever you are ready.'
-                : ($session->end_reason === 'insufficient_credits' ? 'This reading ended because your credits ran out. Add credits, then request to continue.' : 'This reading has ended. Request to continue whenever you are ready.'));
+                ? 'This reading ended because a participant lost connection. Request to continue whenever you are ready.'
+                : ($session->end_reason === 'insufficient_credits' ? 'This reading ended because your credits ran out. Add credits, then request to continue.' : 'This reading has ended.'.($reason ? ' Reason: '.$reason.'.' : '').' Request to continue whenever you are ready.'));
         }
     }
-    public function settle(int $id, ?int $actor = null, bool $end = false, bool $heartbeat = false, int $idleSeconds = 0): ChatSession {
+    public function settle(int $id, ?int $actor = null, bool $end = false, bool $heartbeat = false, int $idleSeconds = 0, ?string $reason = null): ChatSession {
         $ref = ChatSession::findOrFail($id);
-        return DB::transaction(function () use ($ref, $actor, $end, $heartbeat, $idleSeconds) {
+        return DB::transaction(function () use ($ref, $actor, $end, $heartbeat, $idleSeconds, $reason) {
             $client = User::whereKey($ref->client_id)->lockForUpdate()->firstOrFail();
             $s = ChatSession::whereKey($ref->id)->lockForUpdate()->firstOrFail();
             // Settle before updating heartbeat so a late tab cannot resurrect expired time.
-            $this->settleLocked($s, $client, $end);
+            $this->settleLocked($s, $client, $end, $reason);
             if ($end && $s->status === 'pending') {
                 $s->update(['status'=>'rejected','ended_at'=>now(),'end_reason'=>'cancelled']);
                 $this->notice($s,'The reading request was cancelled. You can request to continue here.');
@@ -77,8 +77,8 @@ class ReadingBilling {
                 $this->notice($s,'The reading request expired. Request to continue when you are ready.');
             }
             if ($heartbeat) {
-                // Record actual recent activity, rather than extending presence on every poll.
-                $seen = now()->subSeconds(max(0,min(3600,$idleSeconds)));
+                // Presence tracks connection, not keyboard or mouse activity.
+                $seen = now();
                 if ($actor === $s->client_id && (!$s->client_seen_at || $seen->gt($s->client_seen_at))) $s->client_seen_at = $seen;
                 if ($actor === $s->counselor_id && (!$s->counselor_seen_at || $seen->gt($s->counselor_seen_at))) $s->counselor_seen_at = $seen;
                 $s->save();

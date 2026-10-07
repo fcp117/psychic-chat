@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import HeroOrbs from '@/Components/HeroOrbs.vue';
 import { Link } from '@inertiajs/vue3';
 
 defineProps({
@@ -12,6 +13,7 @@ defineProps({
 <template>
     <div class="psychic-hero relative isolate flex min-h-screen min-h-[100svh] flex-col">
         <div class="hero-shade pointer-events-none absolute inset-0 -z-10" aria-hidden="true"></div>
+        <HeroOrbs />
         <header class="w-full">
             <div class="mx-auto flex h-20 max-w-7xl items-center px-5 sm:px-8">
                 <Link href="/" class="flex items-center gap-2 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary" aria-label="Intuition Island home">

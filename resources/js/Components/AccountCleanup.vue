@@ -22,7 +22,7 @@ function remove() { form.delete(route('admin.cleanup.destroy'), { onSuccess: () 
     <section class="mb-6 rounded-2xl border border-border bg-surface p-5">
         <button type="button" class="font-semibold text-accent-text" :aria-expanded="expanded" @click="expanded = !expanded">Manage unverified registrations {{ expanded ? '−' : '+' }}</button>
         <div v-if="expanded" class="mt-4 space-y-4">
-            <p class="text-sm text-muted">Only unverified User accounts with zero credits and no purchases, transactions, chats, applications, or profile photos are eligible. Verified accounts, admins, and spiritual advisors are protected.</p>
+            <p class="text-sm text-muted">Only unverified User accounts with zero credits and no purchases, transactions, chats, applications, or profile photos are eligible. Verified accounts, admins, and spiritual coaches are protected.</p>
             <label class="flex items-center gap-3 text-sm"><input type="checkbox" :checked="allSelected" :disabled="!eligible.length || loading" @change="toggleAll" />Select all eligible accounts on this page</label>
             <div class="grid gap-2 sm:grid-cols-2">
                 <label v-for="u in eligible" :key="u.id" class="flex min-w-0 items-center gap-3 rounded-xl border border-border p-3 text-sm"><input v-model="selected" type="checkbox" :value="u.id" :disabled="loading" /><span class="min-w-0 break-words">{{ u.name }}<span class="block break-all text-xs text-muted">{{ u.email }}</span></span></label>

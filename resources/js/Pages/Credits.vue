@@ -79,7 +79,7 @@ const buy = () => {
                     <p class="mt-3 font-serif text-5xl">
                         {{ balance.toLocaleString(undefined, { maximumFractionDigits: 4 }) }}
                     </p>
-                    <p class="mt-2 text-sm text-muted">Use credits when a spiritual advisor accepts your reading request.</p>
+                    <p class="mt-2 text-sm text-muted">Use credits when a spiritual coach accepts your reading request.</p>
                 </div>
                 <div class="mt-5 rounded-2xl border border-primary/20 bg-surface/80 px-4 py-3 text-sm sm:mt-0">
                     <p class="font-semibold text-accent-text">Pay only for what you choose</p>
@@ -96,7 +96,7 @@ const buy = () => {
                     </span>
                 </div>
                 <p class="mt-3 text-sm text-muted">
-                    Choose a package. Your chat time depends on the spiritual advisor’s displayed hourly rate.
+                    Choose a package. Your chat time depends on the spiritual coach’s displayed hourly rate.
                 </p>
 
                 <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">

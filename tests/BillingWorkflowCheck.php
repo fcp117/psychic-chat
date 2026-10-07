@@ -5,6 +5,7 @@ $app=require dirname(__DIR__).'/bootstrap/app.php';
 $app->instance('request', Illuminate\Http\Request::create('/'));
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $db=tempnam(sys_get_temp_dir(),'psychic-billing-test-');
+config(['features.forecast'=>true]);
 config(['database.default'=>'sqlite','database.connections.sqlite.database'=>$db,'session.driver'=>'array','cache.default'=>'array','broadcasting.default'=>'null']);
 Illuminate\Support\Facades\DB::purge('sqlite');
 function check($condition,$label) { if (!$condition) throw new RuntimeException($label); echo "PASS $label\n"; }
@@ -85,15 +86,18 @@ try {
     rejects(fn()=> $chat->heartbeat(requestAs($other),$s),'unrelated account cannot read conversation history');
     rejects(fn()=> $chat->agreement(requestAs($other),$s),'unrelated account cannot read continuation agreement');
     $notices=App\Models\Message::where('kind','system')->count();
-    // Idle user polling must not reset the activity clock.
+    // Connected clients remain in the reading even when AFK or on an older client.
     for($idle=5;$idle<=30;$idle+=5) {
         Illuminate\Support\Carbon::setTestNow(now()->addSeconds(5));
         $chat->heartbeat(requestAs($user,['active'=>$idle<30,'idle_seconds'=>$idle]),$s);
         $chat->heartbeat(requestAs($counselor,['active'=>true,'idle_seconds'=>0]),$s);
     }
-    check($continued->fresh()->end_reason==='disconnected','30 seconds without interaction ends the reading despite polling');
+    check($continued->fresh()->status==='active','AFK polling keeps a connected reading active');
+    check($continued->fresh()->billed_units===3600,'AFK connected time is billed at the agreed rate');
+    check(App\Models\Message::where('kind','system')->count()===$notices,'AFK does not generate an end notice');
+    $chat->end(requestAs($user),$continued);
     $billing->settle($continued->id);$billing->settle($continued->id);
-    check(App\Models\Message::where('kind','system')->count()===$notices+1,'automatic end notice is persisted exactly once');
+    check(App\Models\Message::where('kind','system')->count()===$notices+1,'explicit end notice is persisted exactly once');
     $oldCount=$continued->conversationMessages()->count();
     $chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>true]),$counselor);
     $again=App\Models\ChatSession::latest('id')->first();
@@ -134,6 +138,19 @@ foreach ([['user','/admin',403],['user','/earnings',403],['counselor','/admin',4
     echo 'PASS '.$role.' '.$path.' HTTP '.$expected.PHP_EOL;
 }
 
+    config(['features.forecast'=>false]);
+    foreach (['user','counselor','admin'] as $role) {
+        Illuminate\Support\Facades\Auth::guard('web')->setUser(App\Models\User::where('role',$role)->firstOrFail());
+        $r=Illuminate\Http\Request::create('/forecast');
+        $r->headers->set('Accept','application/json');
+        check($kernel->handle($r)->getStatusCode()===404, 'disabled Forecast blocks '.$role);
+    }
+    rejects(fn()=> $manage->index(requestAs($admin,['section'=>'forecasts'])), 'disabled Forecast blocks admin section');
+    rejects(fn()=> $manage->forecast(requestAs($admin,[])), 'disabled Forecast blocks publishing');
+    rejects(fn()=> $manage->deleteForecast(requestAs($admin),1), 'disabled Forecast blocks deletion');
+    config(['features.forecast'=>true]);
+    $r=Illuminate\Http\Request::create('/forecast');
+    check($kernel->handle($r)->getStatusCode()===200, 'Forecast can be re-enabled');
     echo "ALL BILLING CHECKS PASSED\n";
 } finally {
     Illuminate\Support\Carbon::setTestNow();

@@ -106,7 +106,9 @@ class ChatController extends Controller
     public function end(Request $request, ChatSession $chatSession) 
     {
         $this->member($request,$chatSession);
-        $s=$this->billing->settle($chatSession->id,$request->user()->id,true);
+        $reasons = ['finished'=>'Reading completed', 'break'=>'Taking a break', 'time'=>'Need to leave', 'technical'=>'Connection or technical issue', 'not_fit'=>'Not the right fit', 'other'=>'Other'];
+        $data=$request->validate(['reason'=>['nullable', \Illuminate\Validation\Rule::in(array_keys($reasons))]]);
+        $s=$this->billing->settle($chatSession->id,$request->user()->id,true, reason: isset($data['reason']) ? $reasons[$data['reason']] : null);
         return back();
     }
 
@@ -114,7 +116,7 @@ class ChatController extends Controller
 
     private function publicSession(ChatSession $s, Request $request): array 
     {
-        $data=$s->load(['client:id,name','counselor:id,name'])->toArray();
+        $data=$s->load(['client:id,name,profile_photo_path','counselor:id,name,profile_photo_path'])->toArray();
         if ($request->user()->id === $s->counselor_id) unset($data['billed_units'],$data['billed_seconds']);
         return $data;
     }
@@ -124,7 +126,8 @@ class ChatController extends Controller
         $this->member($request,$chatSession);
         $request->validate(['active'=>'sometimes|boolean','idle_seconds'=>'sometimes|integer|min:0|max:86400']);
         $latest=$this->latest($chatSession);
-        $s=$this->billing->settle($latest->id,$request->user()->id,false,$request->boolean('active',true),(int)$request->input('idle_seconds',0));
+        // A successful poll confirms connection, even without mouse/keyboard activity.
+        $s=$this->billing->settle($latest->id,$request->user()->id,false,true);
         return response()->json(['session'=>$this->publicSession($s,$request),'server_time'=>now()->toIso8601String(),'balance'=>$request->user()->fresh()->available_credits, 'messages'=>$s->conversationMessages()->where('id','>',max(0,(int)$request->input('last_message_id',0)))->with('sender:id,name')->orderBy('id')->limit(200)->get()]);
     }
 

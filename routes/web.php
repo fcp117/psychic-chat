@@ -7,7 +7,7 @@ use App\Http\Controllers\ChatController;
 
 Route::get('/', function () {
     if (request()->user() && !request()->user()->hasVerifiedEmail()) return redirect()->route('verification.notice');
-    return Inertia::render(request()->user() ? 'Dashboard' : 'Welcome');
+    return Inertia::render('Dashboard');
 })->name('home');
 
 Route::get('/about', fn () => Inertia::render('About'))->name('about');
@@ -40,7 +40,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/psychics/{counselor}/notifications', [ChatController::class, 'preference'])->name('psychics.notifications');
     Route::get('/psychics', [ChatController::class, 'psychics'])->name('psychics.index');
     Route::post('/psychics/{counselor}/chat', [ChatController::class, 'start'])->middleware('throttle:20,1')->name('psychics.chat');
-    Route::get('/forecast', fn () => Inertia::render('Forecast', ['forecasts' => \Illuminate\Support\Facades\DB::table('forecasts')->whereNotNull('published_at')->where('published_at', '<=', now())->orderByDesc('published_at')->paginate(10)]))->name('forecast');
+    Route::get('/forecast', function () {
+        abort_unless(config('features.forecast'), 404);
+        return Inertia::render('Forecast', ['forecasts' => \Illuminate\Support\Facades\DB::table('forecasts')->whereNotNull('published_at')->where('published_at', '<=', now())->orderByDesc('published_at')->paginate(10)]);
+    })->name('forecast');
     Route::get('/credits', [\App\Http\Controllers\CreditPurchaseController::class,'index'])->name('credits');
     Route::post('/credits/checkout', [\App\Http\Controllers\CreditPurchaseController::class,'checkout'])->middleware(['role:user','throttle:10,1'])->name('credits.checkout');
     Route::get('/credits/purchases/{purchase}', [\App\Http\Controllers\CreditPurchaseController::class,'show'])->name('credits.purchase');
@@ -66,7 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     Route::post('/chat/{chatSession}/accept', [ChatController::class, 'accept'])->name('chat.accept');
     Route::post('/chat/{chatSession}/end', [ChatController::class, 'end'])->name('chat.end');
-    Route::post('/chat/{chatSession}/heartbeat', [ChatController::class, 'heartbeat'])->middleware('throttle:120,1')->name('chat.heartbeat');
+    Route::post('/chat/{chatSession}/heartbeat', [ChatController::class, 'heartbeat'])->middleware('throttle:120,1,chat-heartbeat:')->name('chat.heartbeat');
     // POST: Handles the axios request when a user clicks "Send"
     Route::post('/chat/{chatSession}/message', [ChatController::class, 'store'])->name('chat.message');
 
@@ -95,5 +98,11 @@ Route::middleware(['auth','verified'])->group(function() {
     Route::post('/notifications/read',[\App\Http\Controllers\NotificationController::class,'read'])->middleware('throttle:60,1')->name('notifications.read');
 });
 require __DIR__.'/auth.php';
+Route::post('/chat/{chatSession}/report', [\App\Http\Controllers\ReportController::class,'store'])->middleware(['auth','verified','throttle:5,60,chat-report:'])->name('chat.report');
+Route::middleware(['auth','verified','role:admin'])->group(function () {
+    Route::get('/admin/reports',[\App\Http\Controllers\ReportController::class,'index'])->name('admin.reports');
+    Route::patch('/admin/reports/{report}',[\App\Http\Controllers\ReportController::class,'review'])->whereNumber('report')->name('admin.reports.review');
+    Route::delete('/admin/ip-blocks/{block}',[\App\Http\Controllers\ReportController::class,'unblock'])->whereNumber('block')->name('admin.ip-blocks.delete');
+});
 
 Route::post('/payment-webhooks/paymongo', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->middleware('throttle:120,1')->name('payments.webhook');

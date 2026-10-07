@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             headers: Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_PORT,
         );
         $middleware->web(append: [
+            \App\Http\Middleware\ModerationAccess::class,
             \App\Http\Middleware\EnsureActiveAccount::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
