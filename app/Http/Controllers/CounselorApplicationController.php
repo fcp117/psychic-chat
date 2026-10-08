@@ -50,6 +50,6 @@ class CounselorApplicationController extends Controller {
  public function profile(User $counselor) {
   abort_unless($counselor->role==='counselor' && $counselor->is_approved && !$counselor->is_suspended && $counselor->hasVerifiedEmail(),404);
   $profile=DB::table('counselor_applications')->where('user_id',$counselor->id)->where('status','approved')->first(['biography','specialties','languages','years_experience','availability']);
-  return Inertia::render('Counselors/Profile',['counselor'=>$counselor->only(['id','name','profile_photo_url']),'profile'=>$profile,'rate'=>app(\App\Services\ReadingBilling::class)->rate($counselor)]);
+  return Inertia::render('Counselors/Profile',['counselor'=>$counselor->only(['id','name','profile_photo_url']),'profile'=>$profile,'rating'=>app(\App\Services\CoachFeedback::class)->summary($counselor->id),'highlights'=>\App\Models\CoachReview::where('counselor_id',$counselor->id)->where('highlighted',true)->where('publish_consent',true)->latest()->limit(6)->get(['id','rating','comment','created_at']),'rate'=>app(\App\Services\ReadingBilling::class)->rate($counselor)]);
  }
 }

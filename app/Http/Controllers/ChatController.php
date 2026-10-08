@@ -27,11 +27,16 @@ class ChatController extends Controller
             ->where('id','!=',$request->user()->id)->when($search !== '',fn($q)=>$q->where('name','like','%'.$search.'%'))
             ->orderBy('name')->paginate(12,['id','name','rate_per_hour','profile_photo_path'])->withQueryString();
 
-        $psychics->through(function ($u) use ($prefs)
+        $ratings = \App\Models\CoachReview::whereIn('counselor_id', $psychics->getCollection()->pluck('id'))
+            ->selectRaw('counselor_id, AVG(rating) as average, COUNT(*) as total')
+            ->groupBy('counselor_id')->get()->keyBy('counselor_id');
+
+        $psychics->through(function ($u) use ($prefs, $ratings)
         {
             $rate = $this->billing->rate($u); $p = $prefs->get($u->id);
 
             return ['id'=>$u->id,'name'=>$u->name,'profile_photo_url'=>$u->profile_photo_url,'rate_per_hour'=>$rate,
+                'rating'=>['average'=>round((float) ($ratings->get($u->id)?->average ?? 0), 1), 'count'=>(int) ($ratings->get($u->id)?->total ?? 0)],
                 'has_rate_agreement'=>$p && (int)$p->accepted_rate === $rate,
                 'show_rate_notice'=>!$p || $p->show_rate_notice || (int)$p->accepted_rate !== $rate];
         });
@@ -117,6 +122,7 @@ class ChatController extends Controller
     private function publicSession(ChatSession $s, Request $request): array 
     {
         $data=$s->load(['client:id,name,profile_photo_path','counselor:id,name,profile_photo_path'])->toArray();
+        $data['counselor']['rating'] = app(\App\Services\CoachFeedback::class)->summary($s->counselor_id);
         if ($request->user()->id === $s->counselor_id) unset($data['billed_units'],$data['billed_seconds']);
         return $data;
     }

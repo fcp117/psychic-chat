@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConversationHeader from '@/Components/ConversationHeader.vue';
+import CoachRating from '@/Components/CoachRating.vue';
 import Modal from '@/Components/Modal.vue';
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
 import axios from 'axios';
@@ -115,7 +116,7 @@ const send = async () => {
                 <div class="flex min-w-0 items-center gap-3">
                     <img v-if="partner?.profile_photo_url" :src="partner.profile_photo_url" :alt="partner.name" class="h-12 w-12 shrink-0 rounded-full object-cover" />
                     <span v-else class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft font-semibold text-accent-text">{{ initials(session) }}</span>
-                    <div class="min-w-0"><h1 class="break-words font-serif text-xl sm:text-2xl">{{ partner?.name || 'Your conversation' }}</h1><p class="mt-1 text-xs text-muted"><span :class="present(partnerSeen) ? 'text-success' : 'text-muted'">●</span> {{ present(partnerSeen) ? 'Online' : 'Offline' }}</p></div>
+                    <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">{{ isCounselor ? 'Client' : 'Spiritual Coach' }}</p><h1 class="break-words font-serif text-2xl">{{ partner?.name || 'Your conversation' }}</h1><div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1"><CoachRating v-if="!isCounselor" :rating="partner?.rating" /><p class="text-xs text-muted"><span :class="present(partnerSeen) ? 'text-success' : 'text-muted'">●</span> {{ present(partnerSeen) ? 'Online' : 'Offline' }}</p></div></div>
                 </div>
                 <button v-if="live" class="action ml-auto !px-4 !py-2" :disabled="ending.processing" @click="ending.reset(); ending.clearErrors(); showEnd = true">End reading</button>
                 <span v-else class="ml-auto rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-text">{{ pending ? 'Request pending' : 'Reading ended' }}</span>
@@ -136,6 +137,7 @@ const send = async () => {
             <div v-if="!live && !pending" class="mx-auto max-w-md rounded-xl border border-border bg-surface p-4 text-center text-sm"><p class="text-muted">This reading is inactive. Your conversation stays here.</p><button v-if="!isCounselor" class="mt-2 font-semibold text-accent-text underline" :disabled="loadingAgreement || request.processing" @click="continueChat">Click here to request to continue</button><p v-else class="mt-2 text-xs text-muted">You’ll receive a notification when the user requests to continue.</p></div>
         </div>
         <footer class="shrink-0 pt-3 pb-[env(safe-area-inset-bottom)]">
+            <Link v-if="!isCounselor && !live && !pending" :href="route('reviews.index')" class="mb-3 block rounded-xl border border-border bg-accent-soft px-4 py-3 text-sm text-accent-text">★ How was your reading? Leave feedback</Link>
             <form @submit.prevent="send" class="flex items-center gap-3 rounded-2xl border border-border bg-surface p-2 shadow-sm"><label for="message" class="sr-only">Message</label><input id="message" v-model="newMessage" maxlength="4000" :disabled="sending || !live" class="field h-11 min-w-0 flex-1 !rounded-xl !border-0 !bg-transparent !shadow-none disabled:opacity-60" :placeholder="live ? 'Write a message…' : pending ? 'Waiting for acceptance…' : 'Request a reading to continue…'" /><button type="submit" class="action h-11 shrink-0 !rounded-xl !px-5 !py-0" :disabled="sending || !newMessage.trim() || !live">{{ sending ? 'Sending…' : 'Send' }}</button></form>
             <p v-if="error" role="alert" class="mt-2 text-xs text-error">{{ error }} <button v-if="newMessage.trim()" type="button" class="ml-2 font-semibold underline" :disabled="sending || !online" @click="send">{{ sending ? 'Retrying…' : 'Retry message' }}</button></p><p v-for="e in {...action.errors,...request.errors}" :key="e" role="alert" class="mt-2 text-xs text-error">{{ e }}</p>
         </footer>

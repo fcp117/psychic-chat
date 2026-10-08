@@ -81,6 +81,8 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
+                                        <DropdownLink :href="route('reviews.index')">Reading feedback</DropdownLink>
+                                        <DropdownLink :href="route('tarot.index')">Your daily card</DropdownLink>
                                         <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Coach</DropdownLink>
                                         <DropdownLink
                                             :href="route('profile.edit')"

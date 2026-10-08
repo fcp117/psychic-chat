@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 const page = usePage();
 const signedIn = computed(() => Boolean(page.props.auth?.user));
 const paths = computed(() => [
+    { number: '00', title: 'One card. A little perspective.', text: signedIn.value ? 'Take a breath and reflect with 3 free daily draws, saved to your account.' : 'Take a breath and reflect with 1 free daily draw, or join for 3.', label: 'Explore your daily card', route: 'tarot.index', note: 'No credits needed. Reflection, not prediction.' },
     { number: '01', title: 'A space to connect', text: 'Return to your conversations and make space for what is on your mind.', label: 'Explore your chats', route: 'chat.index' },
     { number: '02', title: 'A little perspective', text: 'Explore published forecasts and find a moment for reflection.', label: 'Visit Forecast', route: 'forecast' },
     { number: '03', title: 'Your reading balance', text: 'See your available credits and stay ready for your next conversation.', label: 'View credits', route: 'credits' },
@@ -59,7 +60,8 @@ onUnmounted(() => window.clearInterval(carouselTimer));
                     <article class="mt-7 flex min-h-52 flex-col border-t border-border pt-6" aria-live="off">
                         <h3 class="font-serif text-2xl text-content">{{ item.title }}</h3>
                         <p class="mb-6 mt-3 text-sm leading-6 text-muted">{{ item.text }}</p>
-                        <Link :href="route(item.route)" class="action mt-auto flex items-center justify-between gap-3 !px-5 !py-3.5">{{ item.label }} <span aria-hidden="true">→</span></Link>
+                        <Link :href="route(item.route)" class="action mt-auto flex items-center justify-between gap-3 !px-5 !py-3.5">{{ item.label }} <span v-if="item.route !== 'tarot.index'" aria-hidden="true">→</span></Link>
+                        <p v-if="item.note" class="mt-3 text-xs leading-5 text-muted">{{ item.note }}</p>
                     </article>
                    </div>
                   </div>

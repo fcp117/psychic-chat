@@ -10,7 +10,8 @@ const page = usePage();
             <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 rounded-3xl border border-border bg-surface px-4 py-3 shadow-lg sm:px-6">
                 <Link :href="route('home')" class="flex items-center gap-2"><ApplicationLogo class="h-8 w-8 text-primary" /><span class="font-serif text-lg text-content">Intuition Island</span></Link>
                 <div class="hidden items-center gap-5 text-sm text-muted lg:flex">
-                    <Link :href="route('home')" class="rounded-full bg-accent-soft px-4 py-2 text-accent-text" aria-current="page">Home</Link>
+                    <Link :href="route('home')" :class="route().current('home') ? 'rounded-full bg-accent-soft px-4 py-2 text-accent-text' : ''" :aria-current="route().current('home') ? 'page' : undefined">Home</Link>
+                    <Link :href="route('tarot.index')" :class="route().current('tarot.*') ? 'text-accent-text' : ''" :aria-current="route().current('tarot.*') ? 'page' : undefined">Daily card</Link>
                     <Link :href="route('chat.index')">Chat</Link>
                     <Link v-if="page.props.features?.forecast" :href="route('forecast')">Forecast</Link>
                     <Link :href="route('credits')">Credits</Link>

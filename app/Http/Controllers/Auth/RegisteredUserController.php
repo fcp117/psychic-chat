@@ -52,6 +52,12 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        $tarotGuest = $request->cookie(\App\Services\DailyTarot::COOKIE);
+        if (is_string($tarotGuest) && \Illuminate\Support\Str::isUuid($tarotGuest)) {
+            $tarot = app(\App\Services\DailyTarot::class);
+            $tarot->state($tarot->guestKey($tarotGuest), $user);
+        }
+
         $request->session()->regenerate();
         try { event(new Registered($user)); }
         catch (ValidationException $e) { return redirect()->route('verification.notice')->withErrors($e->errors()); }

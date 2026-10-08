@@ -11,6 +11,15 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/about', fn () => Inertia::render('About'))->name('about');
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/reading-feedback', [\App\Http\Controllers\CoachReviewController::class,'index'])->name('reviews.index');
+    Route::post('/reading-feedback/{chatSession}', [\App\Http\Controllers\CoachReviewController::class,'store'])->middleware('throttle:10,1,reading-feedback:')->name('reviews.store');
+    Route::get('/admin/reviews', [\App\Http\Controllers\CoachReviewController::class,'coaches'])->middleware('role:admin')->name('admin.reviews');
+    Route::get('/admin/reviews/coaches/{coach}', [\App\Http\Controllers\CoachReviewController::class,'show'])->middleware('role:admin')->name('admin.reviews.coach');
+    Route::patch('/admin/reviews/{review}', [\App\Http\Controllers\CoachReviewController::class,'moderate'])->middleware('role:admin')->name('admin.reviews.moderate');
+});
+Route::get('/daily-tarot', [\App\Http\Controllers\TarotController::class, 'index'])->name('tarot.index');
+Route::post('/daily-tarot/draw', [\App\Http\Controllers\TarotController::class, 'draw'])->middleware('throttle:12,1,tarot-draw:')->name('tarot.draw');
 Route::get('/terms', fn () => Inertia::render('Legal', ['document' => 'terms']))->name('terms');
 Route::get('/privacy', fn () => Inertia::render('Legal', ['document' => 'privacy']))->name('privacy');
 Route::get('/refunds', fn () => Inertia::render('Legal', ['document' => 'refunds']))->name('refunds');
@@ -76,6 +85,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'index'])->name('tarot');
+    Route::post('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'store'])->name('tarot.store');
+    Route::post('/tarot-cards/{card}', [\App\Http\Controllers\AdminTarotController::class, 'update'])->name('tarot.update');
     Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('settings');
     Route::post('/account-cleanup/preview', [\App\Http\Controllers\AccountCleanupController::class,'preview'])->middleware('throttle:10,1')->name('cleanup.preview');
     Route::delete('/account-cleanup', [\App\Http\Controllers\AccountCleanupController::class,'destroy'])->middleware('throttle:10,1')->name('cleanup.destroy');

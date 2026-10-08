@@ -16,9 +16,9 @@ class CreditPurchaseController extends Controller {
     public function index(Request $r) {
         app(\App\Services\ReadingBilling::class)->sweep();
         $settings=$this->shop->settings();
-        return Inertia::render('Credits',['balance'=>$r->user()->fresh()->available_credits,'transactions'=>DB::table('credit_transactions')->where('user_id',$r->user()->id)->orderByDesc('id')->paginate(20),
+        return Inertia::render('Credits',['balance'=>$r->user()->fresh()->available_credits,'transactions'=>DB::table('credit_transactions')->where('user_id',$r->user()->id)->orderByDesc('id')->paginate(5, ['*'], 'transactions_page')->withQueryString(),
             'shop'=>$settings,'packages'=>DB::table('credit_packages')->where('active',true)->where('amount','>=',$settings->minimum_amount)->orderBy('amount')->get(),'paymentMethods'=>$this->gateway->methods(),
-            'purchases'=>CreditPurchase::where('user_id',$r->user()->id)->latest()->limit(10)->get(['id','label','credits','amount','provider','status','created_at']),
+            'purchases'=>CreditPurchase::where('user_id',$r->user()->id)->latest()->orderByDesc('id')->paginate(5, ['id','label','credits','amount','provider','status','created_at'], 'purchases_page')->withQueryString(),
         ]);
     }
     public function checkout(Request $r) {
