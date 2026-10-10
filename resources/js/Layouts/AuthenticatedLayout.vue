@@ -31,11 +31,11 @@ const showingNavigationDropdown = ref(false);
     <div>
         <div class="app-shell relative isolate min-h-screen" :class="page.component === 'Dashboard' ? 'bg-page' : 'shared-portrait-shell'">
             <PageBackdrop v-if="page.component !== 'Dashboard'" />
-            <nav class="sticky top-0 z-50 bg-transparent px-3 py-4 sm:px-5" aria-label="Main navigation">
+            <nav class="z-50 bg-transparent px-3 py-4 sm:px-5" :class="page.component.startsWith('Admin/') ? 'relative' : 'sticky top-0'" aria-label="Main navigation">
                 <!-- Primary Navigation Menu -->
                 <div class="mx-auto max-w-7xl">
                     <div class="relative flex min-h-14 items-center justify-between rounded-2xl border border-border bg-surface px-4 shadow-lg shadow-primary/10 sm:px-5">
-                        <div class="flex shrink-0">
+                        <div class="flex min-w-0 flex-1 items-center gap-4">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
                                 <Link :href="route('home')" class="flex items-center gap-2" aria-label="Intuition Island home">
@@ -47,8 +47,8 @@ const showingNavigationDropdown = ref(false);
                             </div>
 
                             <!-- Navigation Links -->
-                            <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 2xl:flex">
-                                <Link v-for="item in navigation" :key="item.route" :href="route(item.route)" class="rounded-full px-3 py-2 text-sm font-medium transition" :class="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*')) ? 'bg-accent-soft text-accent-text' : 'text-muted hover:bg-surface-hover hover:text-content'">{{ item.label }}</Link>
+                            <div class="hidden min-w-0 flex-1 items-center justify-center gap-1 2xl:flex">
+                                <Link v-for="item in navigation" :key="item.route" :href="route(item.route)" class="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-medium transition" :class="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*')) ? 'bg-accent-soft text-accent-text' : 'text-muted hover:bg-surface-hover hover:text-content'">{{ item.label }}</Link>
                             </div>
                         </div>
 
@@ -66,7 +66,7 @@ const showingNavigationDropdown = ref(false);
                                                 type="button"
                                                 class="inline-flex items-center rounded-md border border-transparent bg-surface px-3 py-2 text-sm font-medium leading-4 text-muted transition duration-150 ease-in-out hover:text-content focus:outline-none"
                                             >
-                                                <UserAvatar :user="$page.props.auth.user" class="mr-2 h-8 w-8 text-xs align-middle" />{{ $page.props.auth.user.name }}
+                                                <UserAvatar :user="$page.props.auth.user" class="mr-2 h-8 w-8 shrink-0 text-xs align-middle" /><span class="max-w-28 truncate">{{ $page.props.auth.user.name }}</span>
 
                                                 <svg
                                                     class="-me-0.5 ms-2 h-4 w-4"
