@@ -7,8 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 class TarotCard extends Model
 {
     protected $guarded = ['id'];
-    protected $casts = ['is_active' => 'boolean'];
-    protected $appends = ['image_url'];
+    protected $casts = ['is_active' => 'boolean', 'is_archived' => 'boolean'];
+    protected $appends = ['image_url', 'is_ready'];
+
+    public const CONTENT_FIELDS = ['category', 'keywords', 'meaning', 'guidance', 'reflection'];
+
+    public function getIsReadyAttribute(): bool
+    {
+        foreach (array_merge(['name', 'image_path'], self::CONTENT_FIELDS) as $field) {
+            if (trim((string) $this->$field) === '') return false;
+        }
+        return true;
+    }
+
+    public function scopeDrawable($query)
+    {
+        $query->where('is_active', true)->where('is_archived', false);
+        foreach (array_merge(['name', 'image_path'], self::CONTENT_FIELDS) as $field) $query->whereRaw('TRIM('.$field.") <> ''");
+        return $query;
+    }
 
     public function getImageUrlAttribute(): string
     {

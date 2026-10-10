@@ -13,8 +13,8 @@ const page = usePage();
                     <Link :href="route('home')" :class="route().current('home') ? 'rounded-full bg-accent-soft px-4 py-2 text-accent-text' : ''" :aria-current="route().current('home') ? 'page' : undefined">Home</Link>
                     <Link :href="route('tarot.index')" :class="route().current('tarot.*') ? 'text-accent-text' : ''" :aria-current="route().current('tarot.*') ? 'page' : undefined">Daily card</Link>
                     <Link :href="route('chat.index')">Chat</Link>
-                    <Link v-if="page.props.features?.forecast" :href="route('forecast')">Forecast</Link>
-                    <Link :href="route('credits')">Credits</Link>
+                    <Link v-if="page.props.features?.forecast" :href="route('forecast')">Moonoscope</Link>
+                    <Link :href="route('credits')">Minutes</Link>
                     <Link :href="route('about')">About</Link>
                 </div>
                 <div class="flex items-center gap-4"><Link :href="route('login')" class="text-sm font-semibold text-accent-text">Log in</Link><Link :href="route('register')" class="action !px-4 !py-2 text-sm">Get started</Link></div>

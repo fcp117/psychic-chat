@@ -1,5 +1,12 @@
 <?php
 
+// BinaryFileResponse handles HTTP byte ranges, including under the local PHP server.
+\Illuminate\Support\Facades\Route::get('/media/intuition-calling', function () {
+    return response()->file(public_path('audio/intuition-calling.mp3'), [
+        'Content-Type' => 'audio/mpeg', 'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->name('media.intuition-calling');
+
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -11,7 +18,20 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/about', fn () => Inertia::render('About'))->name('about');
+Route::get('/birth-chart', [\App\Http\Controllers\BirthChartController::class,'index'])->middleware(['auth','verified'])->name('birth-chart');
+Route::get('/admin/birth-chart', [\App\Http\Controllers\BirthChartController::class,'admin'])->middleware(['auth','verified','role:admin'])->name('admin.birth-chart');
+Route::put('/admin/birth-chart/{template}', [\App\Http\Controllers\BirthChartController::class,'update'])->whereNumber('template')->middleware(['auth','verified','role:admin'])->name('admin.birth-chart.update');
+Route::get('/forecast', [\App\Http\Controllers\MoonoscopeController::class,'index'])->name('forecast');
 Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/support', [\App\Http\Controllers\SupportInboxController::class,'index'])->name('support.index');
+    Route::post('/support', [\App\Http\Controllers\SupportInboxController::class,'send'])->middleware('throttle:20,1,support:')->name('support.send');
+    Route::post('/psychics/{counselor}/message', [\App\Http\Controllers\ConversationToolsController::class,'open'])->middleware('throttle:20,1')->name('conversation.open');
+    Route::get('/conversations/{s}/notes', [\App\Http\Controllers\ConversationToolsController::class,'notes'])->name('conversation.notes');
+    Route::put('/conversations/{s}/notes', [\App\Http\Controllers\ConversationToolsController::class,'notes'])->middleware('throttle:30,1')->name('conversation.notes.save');
+    Route::get('/conversations/{s}/transcript', [\App\Http\Controllers\ConversationToolsController::class,'transcript'])->name('conversation.transcript');
+    Route::get('/messages/{message}/attachment', [\App\Http\Controllers\ConversationToolsController::class,'attachment'])->name('conversation.attachment');
+    Route::post('/conversations/{s}/invite', [\App\Http\Controllers\ConversationToolsController::class,'invite'])->middleware('throttle:5,60,invites:')->name('conversation.invite');
+    Route::post('/reading-invitations/{invitation}/confirm', [\App\Http\Controllers\ConversationToolsController::class,'confirm'])->middleware('throttle:10,1')->name('conversation.confirm');
     Route::get('/reading-feedback', [\App\Http\Controllers\CoachReviewController::class,'index'])->name('reviews.index');
     Route::post('/reading-feedback/{chatSession}', [\App\Http\Controllers\CoachReviewController::class,'store'])->middleware('throttle:10,1,reading-feedback:')->name('reviews.store');
     Route::get('/admin/reviews', [\App\Http\Controllers\CoachReviewController::class,'coaches'])->middleware('role:admin')->name('admin.reviews');
@@ -49,10 +69,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/psychics/{counselor}/notifications', [ChatController::class, 'preference'])->name('psychics.notifications');
     Route::get('/psychics', [ChatController::class, 'psychics'])->name('psychics.index');
     Route::post('/psychics/{counselor}/chat', [ChatController::class, 'start'])->middleware('throttle:20,1')->name('psychics.chat');
-    Route::get('/forecast', function () {
-        abort_unless(config('features.forecast'), 404);
-        return Inertia::render('Forecast', ['forecasts' => \Illuminate\Support\Facades\DB::table('forecasts')->whereNotNull('published_at')->where('published_at', '<=', now())->orderByDesc('published_at')->paginate(10)]);
-    })->name('forecast');
     Route::get('/credits', [\App\Http\Controllers\CreditPurchaseController::class,'index'])->name('credits');
     Route::post('/credits/checkout', [\App\Http\Controllers\CreditPurchaseController::class,'checkout'])->middleware(['role:user','throttle:10,1'])->name('credits.checkout');
     Route::get('/credits/purchases/{purchase}', [\App\Http\Controllers\CreditPurchaseController::class,'show'])->name('credits.purchase');
@@ -85,6 +101,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/moonoscope', [\App\Http\Controllers\MoonoscopeController::class,'adminIndex'])->name('moonoscope');
+    Route::patch('/moonoscope/settings', [\App\Http\Controllers\MoonoscopeController::class,'settings'])->name('moonoscope.settings');
+    Route::put('/moonoscope/templates', [\App\Http\Controllers\MoonoscopeController::class,'templates'])->name('moonoscope.templates');
+    Route::post('/moonoscope/generate', [\App\Http\Controllers\MoonoscopeController::class,'generate'])->middleware('throttle:3,1,moonoscope:')->name('moonoscope.generate');
+    Route::put('/moonoscope/{day}', [\App\Http\Controllers\MoonoscopeController::class,'save'])->whereNumber('day')->name('moonoscope.save');
+    Route::get('/coach-site', [\App\Http\Controllers\CoachSiteController::class, 'index'])->name('coach-site');
+    Route::patch('/coach-site', [\App\Http\Controllers\CoachSiteController::class, 'update'])->name('coach-site.update');
     Route::get('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'index'])->name('tarot');
     Route::post('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'store'])->name('tarot.store');
     Route::post('/tarot-cards/{card}', [\App\Http\Controllers\AdminTarotController::class, 'update'])->name('tarot.update');
@@ -118,3 +141,16 @@ Route::middleware(['auth','verified','role:admin'])->group(function () {
 });
 
 Route::post('/payment-webhooks/paymongo', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->middleware('throttle:120,1')->name('payments.webhook');
+
+Route::middleware(['auth','verified'])->group(function () {
+    Route::get('/bookings',[\App\Http\Controllers\BookingController::class,'index'])->name('bookings.index');
+    Route::post('/bookings',[\App\Http\Controllers\BookingController::class,'store'])->middleware('throttle:20,1')->name('bookings.store');
+    Route::post('/bookings/{booking}/join',[\App\Http\Controllers\BookingController::class,'join'])->name('bookings.join');
+    Route::post('/bookings/{booking}/cancel',[\App\Http\Controllers\BookingController::class,'cancel'])->name('bookings.cancel');
+    Route::post('/booking-hours',[\App\Http\Controllers\BookingController::class,'availability'])->name('bookings.hours');
+    Route::delete('/booking-hours/{window}',[\App\Http\Controllers\BookingController::class,'removeAvailability'])->name('bookings.hours.delete');
+    Route::post('/bookings/{booking}/review',[\App\Http\Controllers\BookingController::class,'review'])->middleware('role:admin')->name('bookings.review');
+    Route::get('/privacy-requests',[\App\Http\Controllers\PrivacyController::class,'index'])->name('privacy.requests');
+    Route::post('/privacy-requests',[\App\Http\Controllers\PrivacyController::class,'store'])->middleware('throttle:5,60')->name('privacy.requests.store');
+    Route::post('/privacy-requests/{privacyRequest}/review',[\App\Http\Controllers\PrivacyController::class,'review'])->middleware('role:admin')->name('privacy.requests.review');
+});

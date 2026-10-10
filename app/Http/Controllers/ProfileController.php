@@ -50,24 +50,6 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-        if ($user->role === 'admin' || \App\Models\CreditPurchase::where('user_id',$user->id)->exists() || \App\Models\ChatSession::where(fn($q) => $q->where('client_id',$user->id)->orWhere('counselor_id',$user->id))->exists() || \Illuminate\Support\Facades\DB::table('credit_transactions')->where('user_id', $user->id)->where('kind', '!=', 'opening')->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['password' => 'Contact an administrator to close accounts with administrative access or credit transactions.']);
-        }
-
-        Auth::logout();
-
-        $photo = $user->profile_photo_path;
-        $user->delete();
-        if ($photo) \Illuminate\Support\Facades\Storage::disk('local')->delete($photo);
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
+        return redirect()->route('privacy.requests')->with('success','Submit an account-closure request here. Your balance and retained records will be explained before confirmation.');
     }
 }

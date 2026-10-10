@@ -79,7 +79,7 @@ onUnmounted(() => clearTimeout(shuffleTimer));
                     </div>
                     <div v-else class="relative grid items-center gap-5 md:grid-cols-2 md:gap-12">
                         <div class="py-4">
-                            <span class="mb-6 inline-flex rounded-full border border-border bg-page/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-accent-text">Free daily reflection · No credits needed</span>
+                            <span class="mb-6 inline-flex rounded-full border border-border bg-page/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-accent-text">Free daily reflection · No minutes needed</span>
                             <h2 class="max-w-md font-serif text-4xl leading-tight sm:text-5xl">A quiet moment.<br />An open mind.</h2>
                             <p class="mt-5 max-w-md leading-7 text-muted">Take a breath and consider: “What could I reflect on today?” You don’t need to type or share your question.</p>
                             <p v-if="!tarot.available" class="mt-6 text-accent-text">Our deck is being prepared. Please check back soon.</p>

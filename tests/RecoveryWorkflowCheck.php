@@ -49,7 +49,7 @@ try {
  AppNotifications::send($other->id,'same','A title','Body','/');AppNotifications::send($other->id,'same','A title','Body','/');check(DB::table('app_notifications')->where('event_key','same')->count()===1,'notification delivery is idempotent');
  $reader=User::forceCreate(['name'=>'Reader','email'=>'reader@example.test','password'=>'Example123!','role'=>'user','email_verified_at'=>now(),'available_credits'=>20]);
  $chat=app(App\Http\Controllers\ChatController::class);
- $chat->start(req($reader,['accepted_rate'=>90,'consent'=>true]),$user->fresh());$s=ChatSession::latest('id')->first();$chat->accept(req($user),$s);$s->refresh();
+ $chat->start(req($reader,['accepted_rate'=>60,'consent'=>true]),$user->fresh());$s=ChatSession::latest('id')->first();$chat->accept(req($user),$s);$s->refresh();
  $key=(string)Illuminate\Support\Str::uuid();$data=['content'=>'Please keep this message once.','request_key'=>$key];
  $first=$chat->store(req($reader,$data),$s)->getData(true);$second=$chat->store(req($reader,$data),$s)->getData(true);
  check($first['message']['id']===$second['message']['id'] && App\Models\Message::where('request_key',$key)->count()===1,'message retry saves once');

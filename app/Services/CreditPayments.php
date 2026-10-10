@@ -14,10 +14,13 @@ class CreditPayments {
             $user=User::whereKey($order->user_id)->lockForUpdate()->firstOrFail();
             $current=CreditPurchase::whereKey($order->id)->lockForUpdate()->firstOrFail();
             if($current->paid_at) return true;
-            $units=$current->credits*3600; $user->credit_units+=$units; $user->save();
-            DB::table('credit_transactions')->insert(['user_id'=>$user->id,'purchase_id'=>$current->id,'kind'=>'sandbox_topup','amount_units'=>$units,'balance_units'=>$user->credit_units,'earning_units'=>0,'reason'=>'Sandbox '.$current->provider.' purchase: '.$current->label,'created_at'=>now(),'updated_at'=>now()]);
+            $wallet=app(MinuteWallet::class); $wallet->expireLocked($user);
+            $units=$current->credits*3600;
+            $wallet->lot($user,$units,$current->label,$current->id,$current->unit_type==='minutes'?now()->addDays(365):null);
+            $user->credit_units+=$units; $user->save();
+            DB::table('credit_transactions')->insert(['user_id'=>$user->id,'purchase_id'=>$current->id,'kind'=>'purchase','unit_type'=>'minutes','amount_units'=>$units,'balance_units'=>$user->credit_units,'earning_units'=>0,'reason'=>$current->label.($current->unit_type==='minutes'?' — valid for 365 days':' — legacy credits converted 1:1; no expiry'),'created_at'=>now(),'updated_at'=>now()]);
             $current->update(['status'=>'paid','paid_at'=>now()]);
-            AppNotifications::send($user->id,'purchase:'.$current->id,'Credits added',$current->credits.' credits were added after payment verification.',route('credits.purchase',$current->id,false));
+            AppNotifications::send($user->id,'purchase:'.$current->id,'Minutes added',$current->credits.' minutes were added after payment verification.',route('credits.purchase',$current->id,false));
             return true;
         },3);
     }

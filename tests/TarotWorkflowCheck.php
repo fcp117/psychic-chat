@@ -1,6 +1,7 @@
 <?php
 // Standalone checks for installations without the optional PHPUnit dependency.
 require dirname(__DIR__).'/vendor/autoload.php';
+require __DIR__.'/Fixtures/TarotCardFixture.php';
 $app = require dirname(__DIR__).'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $database = sys_get_temp_dir().'/tarot-test-'.bin2hex(random_bytes(8)).'.sqlite';
@@ -15,12 +16,12 @@ function tarotRequest($user, $data, $files = []) { $r = Illuminate\Http\Request:
 $failed = false;
 try {
     Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-    (new Database\Seeders\TarotCardSeeder)->run();
+    (new Tests\Fixtures\TarotCardFixture)->run();
     $service = app(App\Services\DailyTarot::class);
     $uuid = fn () => (string) Illuminate\Support\Str::uuid();
     $guest = $service->guestKey($uuid());
     $createUser = fn ($role) => App\Models\User::forceCreate(['name' => 'Tarot Test', 'email' => $uuid().'@test.invalid', 'password' => 'unused', 'role' => $role, 'email_verified_at' => now()]);
-    tarotCheck(App\Models\TarotCard::count() === 5, 'five starter cards');
+    tarotCheck(App\Models\TarotCard::count() === 19, 'five test cards plus fourteen inactive drafts');
     foreach ([null, $createUser('user')] as $parallelUser) {
         $processes = [];
         $parallelGuest = $service->guestKey($uuid());
@@ -64,7 +65,7 @@ try {
     tarotCheck($service->state($midnightGuest, null)['remaining'] === 1, 'allowance resets at Philippine midnight');
     Illuminate\Support\Carbon::setTestNow();
     App\Models\TarotCard::query()->update(['is_active' => false]);
-    $card = App\Models\TarotCard::first();
+    $card = App\Models\TarotCard::where('slug','the-fool')->first();
     $card->update(['is_active' => true]);
     $snapshotGuest = $service->guestKey($uuid());
     $service->draw($snapshotGuest, null, $uuid());
@@ -73,13 +74,13 @@ try {
     $card->update(['name' => 'Edited name', 'image_path' => 'tarot/changed.png', 'is_active' => false]);
     tarotCheck($snapshot === $service->state($snapshotGuest, null)['draws'][0]['reading'], 'saved text and image unchanged after edit');
     tarotRejected(fn () => $service->draw($service->guestKey($uuid()), null, $uuid()), 'empty active deck handled without spending draw');
-    (new Database\Seeders\TarotCardSeeder)->run();
-    tarotCheck($card->fresh()->name === 'Edited name' && !$card->fresh()->is_active && App\Models\TarotCard::count() === 5, 'repeat seed preserves admin edits');
+    (new Tests\Fixtures\TarotCardFixture)->run();
+    tarotCheck($card->fresh()->name === 'Edited name' && !$card->fresh()->is_active && App\Models\TarotCard::count() === 19, 'repeat seed preserves admin edits');
 
     $admin = $createUser('admin');
     $controller = app(App\Http\Controllers\AdminTarotController::class);
     $data = ['name' => 'Uploaded card', 'category' => 'Major Arcana', 'keywords' => 'Reflection', 'meaning' => 'A meaning', 'guidance' => 'A small step', 'reflection' => 'A question?', 'is_active' => true];
-    $image = fn () => new Illuminate\Http\UploadedFile(public_path('images/tarot/the-star.png'), 'card.png', 'image/png', null, true);
+    $image = fn () => new Illuminate\Http\UploadedFile(public_path('images/tarot/violet-tides/I.png'), 'card.png', 'image/png', null, true);
     $controller->store(tarotRequest($admin, $data, ['image' => $image()]));
     $uploaded = App\Models\TarotCard::latest('id')->first();
     $oldImage = $uploaded->image_path;

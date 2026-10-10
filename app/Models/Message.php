@@ -10,6 +10,7 @@ class Message extends Model
     use HasFactory;
 
     protected $guarded = [];
+    protected $hidden = ['attachment_path'];
 
     public function chatSession()
     {

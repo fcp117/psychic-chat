@@ -26,7 +26,8 @@ try {
     $s=App\Models\ChatSession::latest('id')->first();
     check($s->status==='pending' && $s->started_at===null && $user->fresh()->credit_units===360000,'pending request does not charge');
     rejects(fn()=> $chat->accept(requestAs($user),$s),'only counselor accepts');
-    rejects(fn()=> $chat->store(requestAs($user,['content'=>'too soon']),$s),'pending messages rejected');
+    $chat->store(requestAs($user,['content'=>'Free message while waiting','request_key'=>(string)Illuminate\Support\Str::uuid()]),$s);
+    check($user->fresh()->credit_units===360000 && $s->fresh()->status==='pending','pending messages are free and do not start billing');
     $chat->accept(requestAs($counselor),$s);
     $s->refresh(); check($s->status==='active' && $s->agreed_rate===60,'acceptance starts agreed rate');
     Illuminate\Support\Facades\DB::table('billing_settings')->where('id',1)->update(['default_rate'=>120]);
@@ -43,10 +44,10 @@ try {
     rejects(fn()=> $chat->store(requestAs($other,['content'=>'not allowed']),$s),'unrelated user cannot send messages');
     $billing->settle($s->id,$user->id,true);
     check($s->fresh()->status==='completed','explicit end closes reading');
-    rejects(fn()=> $chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>false]),$counselor),'new rate requires fresh consent despite hidden notice');
-    rejects(fn()=> $chat->start(requestAs($user,['accepted_rate'=>60,'consent'=>true]),$counselor),'stale rate rejected');
-    rejects(fn()=> $chat->start(requestAs($other,['accepted_rate'=>120,'consent'=>true]),$counselor),'insufficient balance rejected');
-    $chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>true]),$counselor);
+    rejects(fn()=> $chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>true]),$counselor),'legacy rate rejected for new minute readings');
+    check($billing->rate($counselor)===60,'coach rates cannot change minute consumption');
+    rejects(fn()=> $chat->start(requestAs($other,['accepted_rate'=>60,'consent'=>true]),$counselor),'insufficient balance rejected');
+    $chat->start(requestAs($user,['accepted_rate'=>60,'consent'=>true]),$counselor);
     $s2=App\Models\ChatSession::latest('id')->first();$chat->accept(requestAs($counselor),$s2);
     $units=$user->fresh()->credit_units;
     Illuminate\Support\Carbon::setTestNow(now()->addSeconds(31));$billing->settle($s2->id);
@@ -54,7 +55,7 @@ try {
     $request=requestAs($admin,['amount'=>5,'kind'=>'refund','reason'=>'Test refund','session_id'=>$s->id]);
     $manage->credits($request,$user);
     check($user->fresh()->credit_units===$units+18000,'refund restores credits');
-    check((int)Illuminate\Support\Facades\DB::table('credit_transactions')->where('chat_session_id',$s->id)->sum('earning_units')===18000,'refund reduces counselor earnings');
+    check((int)Illuminate\Support\Facades\DB::table('credit_transactions')->where('chat_session_id',$s->id)->sum('minute_earning_units')===18000,'refund reduces counselor earnings');
     rejects(fn()=> $manage->credits(requestAs($admin,['amount'=>6,'kind'=>'refund','reason'=>'Too much','session_id'=>$s->id]),$user),'over-refund rejected');
     rejects(fn()=> $manage->user(requestAs($admin,['role'=>'user','is_approved'=>false,'is_suspended'=>false,'rate_per_hour'=>null]),$admin),'admin cannot remove own access');
     $guard=new App\Http\Middleware\RequireRole;
@@ -64,21 +65,21 @@ try {
     $other->is_suspended=true;$other->save();
     rejects(fn()=> (new App\Http\Middleware\EnsureActiveAccount)->handle(requestAs($other),fn()=>true),'suspended account denied');
     // A small paid balance must stop exactly at zero, never become negative.
-    $user->credit_units=3600;$user->save();
-    $chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>true]),$counselor);
+    Illuminate\Support\Facades\DB::transaction(function() use($user,$billing){$user->refresh();$billing->record($user,3600-$user->credit_units,'admin_adjustment','Test funding reset');});
+    $chat->start(requestAs($user,['accepted_rate'=>60,'consent'=>true]),$counselor);
     $s3=App\Models\ChatSession::latest('id')->first();$chat->accept(requestAs($counselor),$s3);
-    for($i=0;$i<4;$i++) { Illuminate\Support\Carbon::setTestNow(now()->addSeconds(10));$billing->settle($s3->id,$user->id,false,true);$billing->settle($s3->id,$counselor->id,false,true); }
+    for($i=0;$i<6;$i++) { Illuminate\Support\Carbon::setTestNow(now()->addSeconds(10));$billing->settle($s3->id,$user->id,false,true);$billing->settle($s3->id,$counselor->id,false,true); }
     check($user->fresh()->credit_units===0 && $s3->fresh()->end_reason==='insufficient_credits','exhaustion stops at zero');
     check(App\Models\User::forceCreate(['name'=>'New','email'=>'new@test.invalid','password'=>'test123456'])->fresh()->role==='user','registration defaults to User');
 
     // A conversation persists across separately billed readings.
     $manage->credits(requestAs($admin,['amount'=>100,'kind'=>'add','reason'=>'Continuation test funding']),$user);
-    $redirect=$chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>true]),$counselor);
+    $redirect=$chat->start(requestAs($user,['accepted_rate'=>60,'consent'=>true]),$counselor);
     $continued=App\Models\ChatSession::latest('id')->first();
     check($continued->conversationId()===$s->id && str_ends_with($redirect->getTargetUrl(),'/chat/'.$s->id),'continuation uses the original conversation URL');
     check(count($chat->requests(requestAs($counselor))->getData(true)['requests'])===1,'counselor receives a pending continuation notification');
     $chat->accept(requestAs($counselor),$continued);
-    $chat->store(requestAs($user,['content'=>'Message in continued reading']),$continued);
+    $chat->store(requestAs($user,['content'=>'Message in continued reading','request_key'=>(string)Illuminate\Support\Str::uuid()]),$continued);
     $payload=$chat->heartbeat(requestAs($counselor,['active'=>true]),$s)->getData(true);
     check($payload['session']['id']===$continued->id,'original conversation follows the latest reading');
     check(!array_key_exists('billed_units',$payload['session']) && !array_key_exists('billed_seconds',$payload['session']),'counselor chat API excludes earnings totals');
@@ -93,13 +94,13 @@ try {
         $chat->heartbeat(requestAs($counselor,['active'=>true,'idle_seconds'=>0]),$s);
     }
     check($continued->fresh()->status==='active','AFK polling keeps a connected reading active');
-    check($continued->fresh()->billed_units===3600,'AFK connected time is billed at the agreed rate');
+    check($continued->fresh()->billed_units===1800,'AFK connected time is billed at the agreed rate');
     check(App\Models\Message::where('kind','system')->count()===$notices,'AFK does not generate an end notice');
     $chat->end(requestAs($user),$continued);
     $billing->settle($continued->id);$billing->settle($continued->id);
     check(App\Models\Message::where('kind','system')->count()===$notices+1,'explicit end notice is persisted exactly once');
     $oldCount=$continued->conversationMessages()->count();
-    $chat->start(requestAs($user,['accepted_rate'=>120,'consent'=>true]),$counselor);
+    $chat->start(requestAs($user,['accepted_rate'=>60,'consent'=>true]),$counselor);
     $again=App\Models\ChatSession::latest('id')->first();
     check($again->conversationMessages()->count()===$oldCount && $again->billed_units===0 && $again->status==='pending','new request preserves history and waits for paid acceptance');
     $event=new App\Events\ReadingUpdated($again);

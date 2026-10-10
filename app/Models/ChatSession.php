@@ -14,6 +14,8 @@ class ChatSession extends Model
 
     // Cast the datetime columns so Laravel handles them properly
     protected $casts = [
+        'billing_version' => 'integer',
+        'booking_id' => 'integer', 'hard_stop_at' => 'datetime',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
         'agreed_at' => 'datetime', 'client_seen_at' => 'datetime', 'counselor_seen_at' => 'datetime',

@@ -14,9 +14,11 @@ class CreditShop {
         if ($packageId) {
             $p=DB::table('credit_packages')->where('id',$packageId)->where('active',true)->first();
             if (!$p) throw ValidationException::withMessages(['purchase'=>'This package is no longer available. Refresh the page.']);
-            $quote=['package_id'=>$p->id,'label'=>$p->name,'credits'=>(int)$p->credits,'amount'=>(int)$p->amount];
+            if($p->unit_type!=='minutes') throw ValidationException::withMessages(['package_id'=>'This legacy package is no longer available.']);
+            $quote=['package_id'=>$p->id,'label'=>$p->name,'credits'=>(int)$p->credits,'amount'=>(int)$p->amount,'unit_type'=>'minutes','purchase_kind'=>'package','welcome'=>(bool)$p->welcome];
         } else {
-            throw ValidationException::withMessages(['package_id'=>'Choose one of the available credit packages.']);
+            if(!$credits || $credits>500) throw ValidationException::withMessages(['credits'=>'Choose between 1 and 500 extra minutes.']);
+            $quote=['package_id'=>null,'label'=>'Extra time','credits'=>$credits,'amount'=>$credits*(int)$settings->extra_minute_amount,'unit_type'=>'minutes','purchase_kind'=>'extra','welcome'=>false];
         }
         if ($quote['amount']<max(100,$settings->minimum_amount) || $quote['amount']>10000000) throw ValidationException::withMessages(['purchase'=>'Purchase must meet the shop minimum and cannot exceed ₱100,000.']);
         return $quote;

@@ -5,14 +5,14 @@
 - Home: daily-card promotion inside the animated carousel, for guests and all account roles; there is no separate section below the hero.
 - Reading page: `/daily-tarot`.
 - Admin Settings → Tarot cards: `/admin/tarot-cards` (verified, active administrators only).
-- Five-card starter library: The Fool, Strength, The Star, The Sun, The Hermit. Upright readings only; no zodiac or birthdate calculations.
+- Current library: 14 Violet Tides name-and-image drafts. The five original starters are archived; old readings remain unchanged. Client must complete and activate cards before new draws become available. Upright readings only; no zodiac or birthdate calculations. See `VIOLET_TIDES_AND_MEDIA.md`.
 
 ## Stored data
 
-- `tarot_cards`: editable card name, category, keywords, meaning, guidance, reflection, image path and active status.
+- `tarot_cards`: editable card name, category, keywords, meaning, guidance, reflection, image path, active status and archive flag. Inactive drafts may have blank text; activation requires complete content.
 - `tarot_draws`: account ID or hashed anonymous browser identifier, selected card, date in Asia/Manila, timestamp, immutable reading snapshot and retry token.
 - `tarot_readers`: stable per-reader database lock rows used to serialize claims and draws.
-- Starter artwork: `public/images/tarot/*.png` (original built-in image-generation assets).
+- Starter artwork: `public/images/tarot/*.png` retained for existing readings. Current supplied artwork: `public/images/tarot/violet-tides/*.png`.
 - Uploaded artwork: `storage/app/public/tarot/`, exposed through `public/storage`. Use shared persistent storage in Forge release deployments.
 
 Card replacement creates a new file; old files remain because previous readings may reference them. Deactivate cards rather than deleting them. Vue renders text as plain text, not HTML. Uploads accept JPG, PNG and WebP only, up to 5 MB and 4096px per side. Admin saves are audited.
@@ -43,7 +43,7 @@ npm run build
 
 Run `storage:link` only if the deployment does not already provide the public storage link. Do not use `migrate:fresh` or run unrelated demo seeders. The tarot seeder is idempotent: existing cards and admin edits are never overwritten. No new environment variables or paid API credentials are required. Local admin edits and uploads do not automatically transfer to production.
 
-Before public launch, have the client review the starter interpretations and artwork and finalize the existing draft privacy notice, including retention of anonymous draws. The UI describes these as automated reflections, not predictions or professional advice.
+Before public launch, have the client complete and approve the Violet Tides interpretations and finalize the existing draft privacy notice, including retention of anonymous draws. The UI describes these as automated reflections, not predictions or professional advice.
 
 ## Checks
 

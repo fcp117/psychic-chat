@@ -23,3 +23,18 @@ Artisan::command('payments:reconcile', function () {
     });
 })->purpose('Verify pending sandbox credit purchases without duplicate crediting');
 \Illuminate\Support\Facades\Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping();
+
+Artisan::command('minutes:expire', function () {
+    \App\Models\User::whereIn('id',\Illuminate\Support\Facades\DB::table('minute_lots')->select('user_id')->where('remaining_units','>',0)->where('expires_at','<=',now()))->chunkById(100,function($users){foreach($users as $user) app(\App\Services\MinuteWallet::class)->refresh($user);});
+})->purpose('Expire purchased minute lots exactly once');
+\Illuminate\Support\Facades\Schedule::command('minutes:expire')->everyMinute()->withoutOverlapping();
+
+Artisan::command('bookings:review', function () {
+    app(\App\Services\ReadingBilling::class)->sweep();
+    app(\App\Services\BookingService::class)->sweep();
+})->purpose('Resolve finished bookings and flag missed appointments without automatic penalties');
+\Illuminate\Support\Facades\Schedule::command('bookings:review')->everyMinute()->withoutOverlapping();
+Artisan::command('transcripts:retain', function () {
+    app(\App\Services\TranscriptPrivacy::class)->retention();
+})->purpose('Send advance retention notices, then purge eligible chat content only');
+\Illuminate\Support\Facades\Schedule::command('transcripts:retain')->dailyAt('03:00')->withoutOverlapping();

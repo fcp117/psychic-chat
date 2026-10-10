@@ -16,17 +16,18 @@ class ReadingBilling {
         $session->messages()->create(['sender_id'=>$session->client_id,'kind'=>'system','content'=>$content]);
         $this->notify($session);
     }
-    public function settings() { return DB::table('billing_settings')->find(1); }
-    public function rate(User $counselor): int { return $counselor->rate_per_hour ?? $this->settings()->default_rate; }
+    public function settings() { $s=DB::table('billing_settings')->find(1); $s->default_rate=60; $s->minimum_credits=1; return $s; }
+    public function rate(User $counselor): int { return 60; } // One minute per minute for every coach.
     public function fail(string $message): never { throw ValidationException::withMessages(['reading' => $message]); }
     public function record(User $user, int $amount, string $kind, string $reason, ?int $actor = null, ?ChatSession $session = null, int $earning = 0): void {
+        app(MinuteWallet::class)->change($user,$amount,$reason,$amount<0 && $kind==='reading_charge' ? $session?->booking_id : null);
         $user->credit_units += $amount;
-        if ($user->credit_units < 0) $this->fail('Insufficient credits.');
+        if ($user->credit_units < 0) $this->fail('Insufficient minutes.');
         $user->save();
         DB::table('credit_transactions')->insert([
             'user_id'=>$user->id, 'actor_id'=>$actor, 'counselor_id'=>$session?->counselor_id,
             'chat_session_id'=>$session?->id, 'kind'=>$kind, 'amount_units'=>$amount,
-            'balance_units'=>$user->credit_units, 'earning_units'=>$earning, 'reason'=>$reason,
+            'balance_units'=>$user->credit_units, 'earning_units'=>($session?->billing_version === 2 ? 0 : $earning), 'minute_earning_units'=>($session?->billing_version === 2 ? $earning : 0), 'unit_type'=>'minutes', 'reason'=>$reason,
             'created_at'=>now(), 'updated_at'=>now(),
         ]);
     }
@@ -39,32 +40,47 @@ class ReadingBilling {
         $disconnected = $now - $lastTogether >= $session->disconnect_seconds;
         // Bill only time confirmed by both participants. No charges for disconnect grace.
         $cutoff = $explicitEnd && !$disconnected ? $now : min($now, $lastTogether);
+        $scheduledEnd=$session->hard_stop_at && $now >= $session->hard_stop_at->timestamp;
+        if($session->hard_stop_at)$cutoff=min($cutoff,$session->hard_stop_at->timestamp);
+        $explicitEnd=$explicitEnd || $scheduledEnd;
+        if($scheduledEnd)$reason='Reserved time ended';
         $elapsed = max($session->billed_seconds, $cutoff - $start, 0);
+        $available=app(MinuteWallet::class)->available($client,$session->booking_id);
+        if($session->booking_id)$available=min($available,(int)DB::table('booking_holds')->where('booking_id',$session->booking_id)->whereNull('released_at')->sum('remaining_units'));
         $due = max(0, $elapsed * $session->agreed_rate - $session->billed_units);
-        $charge = min($due, $client->credit_units);
+        $charge = min($due, $available);
+        $minuteMode=(int)$session->billing_version===2;
+        if($minuteMode && ($explicitEnd || $disconnected || $due >= $available)) {
+            $due=max(0,(int)ceil($elapsed/60)*3600-$session->billed_units);
+            $charge=min($due,$available);
+        }
         if ($charge > 0) {
-            $this->record($client, -$charge, 'reading_charge', 'Reading time at '.$session->agreed_rate.' credits/hour', null, $session, $charge);
+            $this->record($client, -$charge, 'reading_charge', $minuteMode ? 'Reading minutes; session total rounds up to a whole minute when ended' : 'Legacy reading at '.$session->agreed_rate.' credits/hour', null, $session, $charge);
             $session->billed_units += $charge;
         }
         $session->billed_seconds = min($elapsed, (int) ceil($session->billed_units / $session->agreed_rate));
-        if ($explicitEnd || $disconnected || $client->credit_units <= 0) {
+        if ($explicitEnd || $disconnected || $available-$charge <= 0) {
             $session->status = 'completed';
-            $exhausted = $client->credit_units <= 0;
-            $session->end_reason = $exhausted ? 'insufficient_credits' : ($disconnected ? 'disconnected' : 'ended');
+            $exhausted = $available-$charge <= 0;
+            $bookingComplete = $session->booking_id && ($scheduledEnd || $exhausted);
+            if ($bookingComplete) $reason = 'Your reserved reading time has finished';
+            $session->end_reason = $bookingComplete ? 'ended' : ($exhausted ? 'insufficient_credits' : ($disconnected ? 'disconnected' : 'ended'));
             $session->ended_at = $session->started_at->copy()->addSeconds($exhausted ? $session->billed_seconds : $elapsed);
         }
         $session->save();
-        if ($client->credit_units <= max(3600, $session->agreed_rate * 60)) AppNotifications::send($client->id,'low-balance:'.$session->id,'Your reading balance is low','Review your remaining credits before continuing.',route('credits',[],false));
+        if ($client->credit_units <= max(3600, $session->agreed_rate * 60)) AppNotifications::send($client->id,'low-balance:'.$session->id,'Your reading balance is low','Review your remaining minutes before continuing.',route('credits',[],false));
         if ($session->status === 'completed') {
+            if($session->booking_id){$b=\App\Models\Booking::findOrFail($session->booking_id);app(BookingService::class)->release($b);$b->update(['status'=>'completed']);}
             $this->notice($session, $session->end_reason === 'disconnected'
                 ? 'This reading ended because a participant lost connection. Request to continue whenever you are ready.'
-                : ($session->end_reason === 'insufficient_credits' ? 'This reading ended because your credits ran out. Add credits, then request to continue.' : 'This reading has ended.'.($reason ? ' Reason: '.$reason.'.' : '').' Request to continue whenever you are ready.'));
+                : ($session->end_reason === 'insufficient_credits' ? 'This reading ended because your minutes ran out. Add minutes, then request to continue.' : 'This reading has ended.'.($reason ? ' Reason: '.$reason.'.' : '').' Request to continue whenever you are ready.'));
         }
     }
     public function settle(int $id, ?int $actor = null, bool $end = false, bool $heartbeat = false, int $idleSeconds = 0, ?string $reason = null): ChatSession {
         $ref = ChatSession::findOrFail($id);
         return DB::transaction(function () use ($ref, $actor, $end, $heartbeat, $idleSeconds, $reason) {
             $client = User::whereKey($ref->client_id)->lockForUpdate()->firstOrFail();
+            app(MinuteWallet::class)->expireLocked($client);
             $s = ChatSession::whereKey($ref->id)->lockForUpdate()->firstOrFail();
             // Settle before updating heartbeat so a late tab cannot resurrect expired time.
             $this->settleLocked($s, $client, $end, $reason);

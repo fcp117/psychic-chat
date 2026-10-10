@@ -34,7 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @return array<string, string>
      */
-    // One whole credit is 3600 integer units: hourly billing stays exact per second.
+    // Compatibility field names retained: one minute is 3600 integer units.
 
     public function getAvailableCreditsAttribute($value) 
     { 
@@ -53,7 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'birthdate' => 'date:Y-m-d',
             'password' => 'hashed',
-            'credit_units' => 'integer', 'rate_per_hour' => 'integer',
+            'welcome_eligible' => 'boolean', 'credit_units' => 'integer', 'rate_per_hour' => 'integer',
             'is_approved' => 'boolean', 'is_suspended' => 'boolean',
         ];
     }

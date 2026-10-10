@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import UserAvatar from '@/Components/UserAvatar.vue';
 import PageBackdrop from '@/Components/PageBackdrop.vue';
 import NotificationCenter from '@/Components/NotificationCenter.vue';
+import ReadingSound from '@/Components/ReadingSound.vue';
 import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
@@ -14,9 +15,11 @@ const page = usePage();
 const navigation = computed(() => [
     { label: 'Home', route: 'home', match: 'home' },
     { label: 'Chat', route: 'chat.index', match: 'chat.*' },
-    ...(page.props.features?.forecast ? [{ label: 'Forecast', route: 'forecast', match: 'forecast' }] : []),
-    { label: 'Credits', route: 'credits', match: 'credits' },
+    { label: 'Bookings', route: 'bookings.index', match: 'bookings.*' },
+    ...(page.props.features?.forecast ? [{ label: 'Moonoscope', route: 'forecast', match: 'forecast' }] : []),
+    { label: 'Minutes', route: 'credits', match: 'credits' },
     { label: 'About', route: 'about', match: 'about' },
+    { label: 'Support', route: 'support.index', match: 'support.*' },
     ...(page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings', match: 'earnings' }] : []),
     ...(page.props.auth.user.role === 'admin' ? [{ label: 'Admin Settings', route: 'admin.settings', match: 'admin.*' }] : []),
 ]);
@@ -44,15 +47,16 @@ const showingNavigationDropdown = ref(false);
                             </div>
 
                             <!-- Navigation Links -->
-                            <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
+                            <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 2xl:flex">
                                 <Link v-for="item in navigation" :key="item.route" :href="route(item.route)" class="rounded-full px-3 py-2 text-sm font-medium transition" :class="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*')) ? 'bg-accent-soft text-accent-text' : 'text-muted hover:bg-surface-hover hover:text-content'">{{ item.label }}</Link>
                             </div>
                         </div>
 
-                        <div class="ml-auto mr-2 flex shrink-0 items-center gap-3 lg:mr-0 lg:pl-4">
+                        <div class="ml-auto mr-2 flex shrink-0 items-center gap-3 2xl:mr-0 2xl:pl-4">
                             <NotificationCenter />
+                            <ReadingSound v-if="page.props.auth.user.role === 'counselor'" />
                         </div>
-                        <div class="hidden lg:ms-3 lg:flex lg:items-center">
+                        <div class="hidden 2xl:ms-3 2xl:flex 2xl:items-center">
                             <!-- Settings Dropdown -->
                             <div class="relative ms-3">
                                 <Dropdown align="right" width="48">
@@ -81,9 +85,10 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
+                                        <DropdownLink v-if="page.props.features?.birthChart" :href="route('birth-chart')">Your birth chart</DropdownLink>
                                         <DropdownLink :href="route('reviews.index')">Reading feedback</DropdownLink>
                                         <DropdownLink :href="route('tarot.index')">Your daily card</DropdownLink>
-                                        <DropdownLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Coach</DropdownLink>
+                                        <DropdownLink v-if="page.props.auth.user.role === 'user' && page.props.coachSite?.applications_open" :href="route('counselor.apply')">Become a Spiritual Coach</DropdownLink>
                                         <DropdownLink
                                             :href="route('profile.edit')"
                                         >
@@ -105,7 +110,7 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <!-- Hamburger -->
-                        <div class="-me-2 flex items-center lg:hidden">
+                        <div class="-me-2 flex items-center 2xl:hidden">
                             <button type="button" aria-label="Toggle navigation" :aria-expanded="showingNavigationDropdown"
                                 @click="
                                     showingNavigationDropdown =
@@ -153,7 +158,7 @@ const showingNavigationDropdown = ref(false);
                         block: showingNavigationDropdown,
                         hidden: !showingNavigationDropdown,
                     }"
-                    class="lg:hidden"
+                    class="2xl:hidden"
                 >
                     <div class="space-y-1 pb-3 pt-2">
                         <ResponsiveNavLink v-for="item in navigation" :key="item.route" :href="route(item.route)" :active="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*'))">{{ item.label }}</ResponsiveNavLink>
@@ -175,7 +180,8 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user'" :href="route('counselor.apply')">Become a Spiritual Coach</ResponsiveNavLink>
+                            <ResponsiveNavLink v-if="page.props.features?.birthChart" :href="route('birth-chart')">Your birth chart</ResponsiveNavLink>
+                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user' && page.props.coachSite?.applications_open" :href="route('counselor.apply')">Become a Spiritual Coach</ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('profile.edit')">
                                 Profile
                             </ResponsiveNavLink>
@@ -199,7 +205,7 @@ const showingNavigationDropdown = ref(false);
                 class="border-b border-border bg-surface"
                 v-if="$slots.header"
             >
-                <div class="mx-auto max-w-7xl px-4 py-6 lg:px-6 lg:px-8">
+                <div class="mx-auto max-w-7xl px-4 py-6 2xl:px-6 2xl:px-8">
                     <slot name="header" />
                 </div>
             </header>

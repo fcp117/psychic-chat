@@ -9,10 +9,12 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 class CounselorApplicationController extends Controller {
  public function show(Request $r) {
+  abort_unless(app(\App\Services\CoachSite::class)->settings()['applications_open'] || DB::table('counselor_applications')->where('user_id',$r->user()->id)->exists(),403,'Coach applications are currently closed.');
   abort_unless(in_array($r->user()->role,['user','counselor']),403);
   return Inertia::render('Counselors/Apply',['application'=>DB::table('counselor_applications')->where('user_id',$r->user()->id)->first()]);
  }
  public function store(Request $r) {
+  abort_unless(app(\App\Services\CoachSite::class)->settings()['applications_open'],403,'Coach applications are currently closed.');
   abort_unless($r->user()->role==='user',403);
   $v=$r->validate(['biography'=>'required|string|min:80|max:2000','specialties'=>'required|string|max:200','languages'=>'required|string|max:200','years_experience'=>'required|integer|min:0|max:60','qualifications'=>'required|string|min:10|max:2000','availability'=>'required|string|min:5|max:500','consent'=>'accepted']); unset($v['consent']);
   DB::transaction(function()use($r,$v){
@@ -48,6 +50,7 @@ class CounselorApplicationController extends Controller {
   return back()->with('success','Application reviewed. The applicant has been notified.');
  }
  public function profile(User $counselor) {
+  abort_unless(app(\App\Services\CoachSite::class)->allows($counselor->id),404);
   abort_unless($counselor->role==='counselor' && $counselor->is_approved && !$counselor->is_suspended && $counselor->hasVerifiedEmail(),404);
   $profile=DB::table('counselor_applications')->where('user_id',$counselor->id)->where('status','approved')->first(['biography','specialties','languages','years_experience','availability']);
   return Inertia::render('Counselors/Profile',['counselor'=>$counselor->only(['id','name','profile_photo_url']),'profile'=>$profile,'rating'=>app(\App\Services\CoachFeedback::class)->summary($counselor->id),'highlights'=>\App\Models\CoachReview::where('counselor_id',$counselor->id)->where('highlighted',true)->where('publish_consent',true)->latest()->limit(6)->get(['id','rating','comment','created_at']),'rate'=>app(\App\Services\ReadingBilling::class)->rate($counselor)]);

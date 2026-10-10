@@ -4,11 +4,17 @@ import { Link, usePage } from '@inertiajs/vue3';
 const props=defineProps({ section: { type:String, default:'users' } });
 const page=usePage();
 const sections=computed(()=>[
+ ['birth-chart','Birth charts','Review and edit report interpretations'],
+ ['moonoscope','Moonoscope','Daily sky facts, messages and publishing'],
+ ['bookings','Appointments','Office hours, bookings and no-show reviews'],
+ ['privacy','Privacy requests','Transcript deletion and account closure'],
+ ['support','Support inbox','Private technical and credit questions'],
+ ['coach-site','Coach availability','Rainbow-only mode and application access'],
  ['users','Accounts','Users & Spiritual Coaches'],['applications','Applications','Review coach applications'],
  ['reviews','Coach reviews','Ratings and feedback, organized by coach'],['reports','Reports & access','Review reports and manage blocks'],['tarot','Tarot cards','Create and curate the daily reflection deck'],['health','System health','Monitor site incidents'],
- ['pricing','Pricing & billing','Rates and credit packages'],['transactions','Credit transactions','Review balance changes'],
+ ['pricing','Pricing & billing','Minute pricing and packages'],['transactions','Balance transactions','Review balance changes'],
  ['sessions','Chat sessions','Manage readings'],['forecasts','Forecasts','Manage published forecasts'],['audit','Audit history','Track administrative changes'],
-].filter(([key])=>key!=='forecasts'||page.props.features?.forecast));
+].filter(([key])=>!['forecasts','moonoscope'].includes(key)||page.props.features?.forecast));
 const active=computed(()=>sections.value.find(([key])=>key===props.section)||sections.value[0]);
 </script>
 <template>
@@ -17,7 +23,7 @@ const active=computed(()=>sections.value.find(([key])=>key===props.section)||sec
    <aside class="border-b border-border bg-page/70 p-4 lg:border-b-0 lg:border-r">
     <div class="px-2 pb-4 pt-2"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">Administration</p><h1 class="mt-2 font-serif text-2xl">Admin Settings</h1></div>
     <nav aria-label="Admin sections" class="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
-     <Link v-for="[key,label] in sections" :key="key" :href="key==='reviews'?route('admin.reviews'):key==='reports'?route('admin.reports'):key==='tarot'?route('admin.tarot'):route('admin.settings',{section:key})" :aria-current="section===key?'page':undefined" class="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" :class="section===key?'bg-accent-soft text-accent-text':'text-muted hover:bg-surface-hover hover:text-content'"><span>{{ label }}</span><span v-if="section===key" class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span></Link>
+     <Link v-for="[key,label] in sections" :key="key" :href="key==='birth-chart'?route('admin.birth-chart'):key==='moonoscope'?route('admin.moonoscope'):key==='bookings'?route('bookings.index'):key==='privacy'?route('privacy.requests'):key==='support'?route('support.index'):key==='coach-site'?route('admin.coach-site'):key==='reviews'?route('admin.reviews'):key==='reports'?route('admin.reports'):key==='tarot'?route('admin.tarot'):route('admin.settings',{section:key})" :aria-current="section===key?'page':undefined" class="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" :class="section===key?'bg-accent-soft text-accent-text':'text-muted hover:bg-surface-hover hover:text-content'"><span>{{ label }}</span><span v-if="section===key" class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span></Link>
     </nav>
    </aside>
    <div class="min-w-0">

@@ -7,10 +7,10 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 const page = usePage();
 const signedIn = computed(() => Boolean(page.props.auth?.user));
 const paths = computed(() => [
-    { number: '00', title: 'One card. A little perspective.', text: signedIn.value ? 'Take a breath and reflect with 3 free daily draws, saved to your account.' : 'Take a breath and reflect with 1 free daily draw, or join for 3.', label: 'Explore your daily card', route: 'tarot.index', note: 'No credits needed. Reflection, not prediction.' },
-    { number: '01', title: 'A space to connect', text: 'Return to your conversations and make space for what is on your mind.', label: 'Explore your chats', route: 'chat.index' },
-    { number: '02', title: 'A little perspective', text: 'Explore published forecasts and find a moment for reflection.', label: 'Visit Forecast', route: 'forecast' },
-    { number: '03', title: 'Your reading balance', text: 'See your available credits and stay ready for your next conversation.', label: 'View credits', route: 'credits' },
+    { number: '00', title: 'One card. A little perspective.', text: signedIn.value ? 'Take a breath and reflect with 3 free daily draws, saved to your account.' : 'Take a breath and reflect with 1 free daily draw, or join for 3.', label: 'Explore your daily card', route: 'tarot.index', note: 'No minutes needed. Reflection, not prediction.' },
+    { number: '01', title: page.props.coachSite?.rainbow_only ? 'Meet Coach Rainbow' : 'A space to connect', text: page.props.coachSite?.rainbow_only ? 'Explore your questions through a private, thoughtful conversation with Rainbow.' : 'Return to your conversations and make space for what is on your mind.', label: page.props.coachSite?.rainbow_only ? 'Connect with Rainbow' : 'Explore your chats', route: page.props.coachSite?.rainbow_only ? 'psychics.index' : 'chat.index' },
+    { number: '02', title: 'A little perspective', text: 'Let the Moon light your way, one day at a time.', label: 'Explore Moonoscope', route: 'forecast' },
+    { number: '03', title: 'Your reading balance', text: 'See your available minutes and stay ready for your next conversation.', label: 'View minutes', route: 'credits' },
 ].filter(item => item.route !== 'forecast' || page.props.features?.forecast));
 const activePath = ref(0);
 const paused = ref(false);
@@ -45,7 +45,7 @@ onUnmounted(() => window.clearInterval(carouselTimer));
                     <p class="mt-7 max-w-lg text-base leading-7 text-muted">Slow down, explore your questions, and find space for a meaningful conversation.</p>
                     <div class="mt-9 flex flex-wrap gap-3">
                         <Link :href="route('chat.index')" class="rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-on-primary hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">Go to Chat</Link>
-                        <Link v-if="page.props.features?.forecast" :href="route('forecast')" class="rounded-full border border-border bg-surface px-7 py-3.5 text-sm font-semibold text-content hover:bg-surface-hover">Explore Forecast</Link>
+                        <Link v-if="page.props.features?.forecast" :href="route('forecast')" class="rounded-full border border-border bg-surface px-7 py-3.5 text-sm font-semibold text-content hover:bg-surface-hover">Explore Moonoscope</Link>
                     </div>
                 </div></div>
                 <section class="w-full min-w-0 max-w-md px-4 sm:px-5 lg:justify-self-end" aria-label="Explore Intuition Island" aria-roledescription="carousel" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false">
@@ -72,7 +72,6 @@ onUnmounted(() => window.clearInterval(carouselTimer));
                 </section>
             </div>
         </section>
-        <footer class="bg-page px-6 py-6 text-center text-xs text-muted">© 2026 Intuition Island. All rights reserved.</footer>
     </component>
 </template>
 

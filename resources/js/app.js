@@ -5,8 +5,7 @@ import './echo';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
-import RecoveryNotice from './Components/RecoveryNotice.vue';
-import SiteAssistant from './Components/CorpusAssistant.vue';
+import SiteLayout from './Layouts/SiteLayout.vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const configuredName = import.meta.env.VITE_APP_NAME;
@@ -16,7 +15,8 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: async (name) => {
         const page = await resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue'));
-        page.default.layout = (h, page) => h('div', [page, h(SiteAssistant), h(RecoveryNotice)]);
+        // One persistent layout keeps audio and its mute state alive during navigation.
+        page.default.layout = SiteLayout;
         return page;
     },
     setup({ el, App, props, plugin }) {

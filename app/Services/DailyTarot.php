@@ -52,8 +52,8 @@ class DailyTarot
                 'remaining' => max(0, $limit - $rows->count()),
                 'date' => now('Asia/Manila')->toDateString(),
                 'resets_at' => now('Asia/Manila')->addDay()->startOfDay()->toIso8601String(),
-                'available' => TarotCard::where('is_active', true)->exists(),
-                'deck_size' => TarotCard::where('is_active', true)->count(),
+                'available' => TarotCard::drawable()->exists(),
+                'deck_size' => TarotCard::drawable()->count(),
                 'draws' => $visible->map(fn ($draw) => ['id' => $draw->id, 'created_at' => $draw->created_at, 'reading' => json_decode($draw->reading, true)])->values(),
             ];
         }, 5);
@@ -73,7 +73,7 @@ class DailyTarot
             if ($today->count() >= ($user ? 3 : 1)) {
                 throw ValidationException::withMessages(['draw' => 'You have used your free draws today. New draws are available at midnight Philippine time.']);
             }
-            $cards = TarotCard::where('is_active', true)->get();
+            $cards = TarotCard::drawable()->get();
             if ($cards->isEmpty()) throw ValidationException::withMessages(['draw' => 'The deck is being prepared. Please come back soon.']);
             $unseen = $cards->whereNotIn('id', $today->pluck('tarot_card_id')->all())->values();
             $pool = $unseen->isNotEmpty() ? $unseen : $cards->values();

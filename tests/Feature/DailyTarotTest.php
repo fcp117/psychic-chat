@@ -5,7 +5,8 @@ namespace Tests\Feature;
 use App\Models\TarotCard;
 use App\Models\User;
 use App\Services\DailyTarot;
-use Database\Seeders\TarotCardSeeder;
+require_once dirname(__DIR__).'/Fixtures/TarotCardFixture.php';
+use Tests\Fixtures\TarotCardFixture as TarotCardSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -112,7 +113,7 @@ class DailyTarotTest extends TestCase
     public function test_inactive_cards_excluded_and_saved_content_unchanged(): void
     {
         TarotCard::query()->update(['is_active' => false]);
-        $card = TarotCard::first();
+        $card = TarotCard::where('slug','the-fool')->first();
         $card->update(['is_active' => true]);
         $service = app(DailyTarot::class);
         $guest = $service->guestKey($this->token());
@@ -131,7 +132,7 @@ class DailyTarotTest extends TestCase
         foreach (['user', 'counselor'] as $role) {
             $this->actingAs($this->member($role))->get(route('admin.tarot'))->assertForbidden();
             $this->post(route('admin.tarot.store'), [])->assertForbidden();
-            $this->post(route('admin.tarot.update', TarotCard::first()->id), [])->assertForbidden();
+            $this->post(route('admin.tarot.update', TarotCard::where('slug','the-fool')->first()->id), [])->assertForbidden();
         }
         $admin = $this->member('admin');
         $this->actingAs($admin)->get(route('admin.tarot'))->assertOk();
@@ -161,13 +162,13 @@ class DailyTarotTest extends TestCase
     public function test_admin_upload_validation_and_repeat_seed_preserve_edits(): void
     {
         $this->actingAs($this->member('admin'));
-        $card = TarotCard::first();
+        $card = TarotCard::where('slug','the-fool')->first();
         $data = $card->only(['name', 'category', 'keywords', 'meaning', 'guidance', 'reflection', 'is_active']);
         $this->post(route('admin.tarot.update', $card->id), $data + ['image' => UploadedFile::fake()->create('bad.svg', 1, 'image/svg+xml')])->assertSessionHasErrors('image');
         $this->post(route('admin.tarot.store'), $data)->assertSessionHasErrors('image');
         $card->update(['name' => 'My edited name', 'is_active' => false]);
         $this->seed(TarotCardSeeder::class);
-        $this->assertSame(5, TarotCard::count());
+        $this->assertSame(19, TarotCard::count());
         $this->assertSame('My edited name', $card->fresh()->name);
         $this->assertFalse($card->fresh()->is_active);
     }

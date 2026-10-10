@@ -38,7 +38,7 @@ class PaymongoGateway
         $returnUrl = route('credits.purchase', $order->id);
         $data = $this->http()->withHeaders(['Idempotency-Key' => $order->id])
             ->post(self::API.'/v2/checkout_sessions', ['data' => ['attributes' => [
-                'line_items' => [['name' => $order->label.' — '.$order->credits.' credits', 'amount' => $order->amount, 'currency' => 'PHP', 'quantity' => 1]],
+                'line_items' => [['name' => $order->label.' — '.$order->credits.' '.($order->unit_type ?? 'credits'), 'amount' => $order->amount, 'currency' => 'PHP', 'quantity' => 1]],
                 'payment_method_types' => $this->paymentMethodTypes(),
                 'reference_number' => $order->id,
                 'metadata' => ['purchase_id' => $order->id],

@@ -32,10 +32,11 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'features' => ['forecast' => (bool) config('features.forecast')],
+            'coachSite' => fn () => app(\App\Services\CoachSite::class)->settings(),
+            'features' => ['forecast' => (bool) config('features.forecast'), 'birthChart' => (bool) config('birth_chart.enabled')],
             'flash' => ['success' => fn () => $request->session()->get('success'), 'error' => fn () => $request->session()->get('error')],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? (function()use($request){$wallet=app(\App\Services\MinuteWallet::class);$u=$wallet->refresh($request->user());$u->setAttribute('spendable_minutes',$wallet->available($u)/3600);return $u;})() : null,
             ],
             'assistant' => [
                 'enabled' => (bool) config('assistant.enabled') && filled(config('services.together.key')),
