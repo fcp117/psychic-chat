@@ -13,6 +13,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        if (!app()->environment(['local', 'testing'])) throw new \RuntimeException('Development accounts cannot be seeded outside local or testing environments.');
         // 1. Create a Test Client
         User::create([
             'name' => 'John Doe (Client)',

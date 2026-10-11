@@ -80,7 +80,8 @@ class CreditPurchaseController extends Controller {
         $purchase->fresh()->update(['status'=>'cancelled','checked_at'=>now()]);
         return redirect()->route('credits.purchase',$purchase)->with('success','Checkout cancelled. If a payment was already completed with PayMongo, minutes will still be added after verification.');
     }
-    public function webhook(Request $r,string $provider) {
+    public function webhook(Request $r) {
+        $provider = 'paymongo';
         $id=$this->gateway->webhookOrder($r,$provider);
         if($id) {
             $order=CreditPurchase::where('provider',$provider)->where('provider_id',$id)->first();

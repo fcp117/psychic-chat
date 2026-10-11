@@ -37,19 +37,14 @@ class PasswordResetLinkController extends Controller
             throw ValidationException::withMessages(['email' => 'Email delivery is not configured yet. Please contact the administrator.']);
         }
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
-
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
+        try {
+            Password::sendResetLink($request->only('email'));
+        } catch (\Throwable $error) {
+            // Delivery errors must not reveal which addresses have accounts.
+            \Illuminate\Support\Facades\Log::warning('Password recovery delivery failed', ['type'=>get_class($error)]);
         }
 
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
-        ]);
+        // Unknown addresses and the broker's per-account cooldown must look identical.
+        return back()->with('status', 'If an account matches that email, a password reset link will be sent. Please check your inbox.');
     }
 }

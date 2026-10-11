@@ -7,7 +7,23 @@ import CoachRating from '@/Components/CoachRating.vue';
 import Modal from '@/Components/Modal.vue';
 import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
 import axios from 'axios';
-const props = defineProps({ session: Object, sessions: Array, conversationId: Number, initialMessages: Array, currentUser: Object });
+const props = defineProps({ session: Object, sessions: Array, conversationId: Number, initialMessages: Array, hasOlderMessages: Boolean, currentUser: Object });
+const hasOlder = ref(props.hasOlderMessages), loadingOlder = ref(false), historyError = ref('');
+const loadOlder = async () => {
+    if (loadingOlder.value || !hasOlder.value) return;
+    loadingOlder.value = true; historyError.value = '';
+    try {
+        const { data } = await axios.get(route('chat.history', props.conversationId), { params: { before: messages.value[0]?.id } });
+        const oldHeight = container.value?.scrollHeight || 0;
+        const oldTop = container.value?.scrollTop || 0;
+        const known = new Set(messages.value.map(m => m.id));
+        messages.value = [...data.messages.filter(m => !known.has(m.id)), ...messages.value];
+        hasOlder.value = data.has_more;
+        await nextTick();
+        if (container.value) container.value.scrollTop = oldTop + container.value.scrollHeight - oldHeight;
+    } catch { historyError.value = 'Could not load earlier messages. Please retry.'; }
+    finally { loadingOlder.value = false; }
+};
 const session = ref(props.session), balance = ref(props.currentUser.spendable_minutes ?? props.currentUser.available_credits);
 const messages = ref([...props.initialMessages]), newMessage = ref(''), sending = ref(false);
 const messageDate = message => {
@@ -110,12 +126,13 @@ const send = async () => {
     <Head :title="partner?.name || 'Conversation'" />
     <AuthenticatedLayout>
     <main class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
-        <div class="grid min-h-[calc(100svh-8.5rem)] overflow-x-auto rounded-3xl border border-border bg-surface shadow-xl shadow-primary/10 grid-cols-[minmax(15rem,28%)_minmax(24rem,1fr)]">
-            <aside class="flex min-h-0 flex-col border-b border-border bg-page/60 border-b-0 border-r">
+        <div class="conversation-layout conversation-room grid min-h-[calc(100svh-8.5rem)] overflow-x-auto rounded-3xl border border-border bg-surface shadow-xl shadow-primary/10 grid-cols-[minmax(15rem,28%)_minmax(24rem,1fr)]">
+            <aside class="conversation-sidebar flex min-h-0 flex-col border-b border-border bg-page/60 border-b-0 border-r">
                 <ConversationHeader :balance="Number(balance)" />
                 <div class="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4 pt-2"><Link v-for="item in sessions" :key="item.id" :href="route('chat.room', item.conversation_id)" class="group flex items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-accent-soft focus-visible:bg-accent-soft" :class="item.conversation_id === conversationId ? 'bg-accent-soft ring-1 ring-inset ring-primary/20' : ''"><span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-accent-text">{{ initials(item) }}</span><span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold text-content">{{ sessionPartner(item)?.name || 'Your reading' }}</span><span class="mt-1 block truncate text-xs" :class="item.status === 'active' ? 'text-success' : 'text-muted'">{{ statusLabel(item.status) }}</span></span><span class="text-lg text-muted transition group-hover:translate-x-0.5 group-hover:text-accent-text" aria-hidden="true">›</span></Link></div>
             </aside>
             <section class="flex min-h-[32rem] min-w-0 flex-col bg-gradient-to-br from-page via-surface to-accent-soft/40 p-3 sm:p-5">
+        <div class="mb-2 flex items-center justify-between gap-2 md:hidden"><Link :href="route('chat.index')" class="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text">← All conversations</Link><Link v-if="!isCounselor" :href="route('credits')" class="text-xs text-accent-text">{{ Number(balance).toFixed(2) }} min left</Link></div>
         <header class="shrink-0 border border-border bg-surface p-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex min-w-0 items-center gap-3">
@@ -133,6 +150,8 @@ const send = async () => {
         <ConversationTools :session="session" :coach="isCounselor" :conversation-id="conversationId" @refresh="heartbeat" @message="append" />
         <div v-if="!online || connectionError" class="flex flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs" role="status"><span class="text-error">{{ !online ? 'Offline · waiting for your connection' : 'Reconnecting to the server…' }}</span><button v-if="connectionError && online" class="text-accent-text underline" @click="heartbeat">Reconnect now</button></div>
         <div ref="container" role="log" aria-label="Conversation messages" aria-live="polite" class="-mt-px flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain border border-border bg-page p-3 sm:p-5">
+            <button v-if="hasOlder" type="button" class="self-center text-xs text-accent-text underline" :disabled="loadingOlder" @click="loadOlder">{{ loadingOlder ? 'Loading…' : 'Load earlier messages' }}</button>
+            <p v-if="historyError" role="alert" class="text-center text-xs text-error">{{ historyError }}</p>
             <p v-if="reportSent" role="status" class="text-center text-xs text-muted">Report submitted for administrator review.</p>
             <p v-if="!messages.length" class="py-8 text-center text-sm text-muted">Your messages stay here across readings.</p>
             <template v-for="(msg,index) in messages" :key="msg.id">

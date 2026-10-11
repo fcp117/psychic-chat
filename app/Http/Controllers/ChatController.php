@@ -170,7 +170,22 @@ class ChatController extends Controller
             $item->setAttribute('conversation_id', $item->conversationId());
             if ($request->user()->role === 'counselor') $item->makeHidden(['billed_units', 'billed_seconds']);
         });
-        return Inertia::render('Chat/Room',['session'=>$this->publicSession($s,$request), 'sessions'=>$sessions, 'conversationId'=>$s->conversationId(), 'initialMessages'=>$s->conversationMessages()->with('sender:id,name')->orderBy('id')->get(), 'currentUser'=>$request->user()->fresh()->setAttribute('spendable_minutes',app(\App\Services\MinuteWallet::class)->available($request->user()->fresh(),$s->booking_id)/3600)]);
+        $history = $this->messagePage($s);
+        return Inertia::render('Chat/Room',['session'=>$this->publicSession($s,$request), 'sessions'=>$sessions, 'conversationId'=>$s->conversationId(), 'initialMessages'=>$history['messages'], 'hasOlderMessages'=>$history['has_more'], 'currentUser'=>$request->user()->fresh()->setAttribute('spendable_minutes',app(\App\Services\MinuteWallet::class)->available($request->user()->fresh(),$s->booking_id)/3600)]);
+    }
+
+    private function messagePage(ChatSession $session, ?int $before = null): array
+    {
+        $rows = $session->conversationMessages()->when($before, fn ($q) => $q->where('id', '<', $before))
+            ->with('sender:id,name')->orderByDesc('id')->limit(51)->get();
+        return ['messages'=>$rows->take(50)->reverse()->values(), 'has_more'=>$rows->count() > 50];
+    }
+
+    public function history(Request $request, ChatSession $chatSession)
+    {
+        $this->member($request, $chatSession);
+        $data = $request->validate(['before'=>'required|integer|min:1']);
+        return response()->json($this->messagePage($chatSession, (int) $data['before']));
     }
 
     public function agreement(Request $request, ChatSession $chatSession) 
@@ -197,7 +212,9 @@ class ChatController extends Controller
             if($existing) { abort_unless($existing->chat_session_id===$chatSession->id && $existing->content===$request->content,409); return response()->json(['message'=>$existing->load('sender:id,name')]); }
         }
         $this->billing->settle($chatSession->id,$request->user()->id,false,true);
-        $message=DB::transaction(function () use ($chatSession,$request) {
+        $storedPath = null;
+        try {
+        $message=DB::transaction(function () use ($chatSession,$request,&$storedPath) {
             $client=User::whereKey($chatSession->client_id)->lockForUpdate()->firstOrFail();
             $coach=User::whereKey($chatSession->counselor_id)->lockForUpdate()->firstOrFail();
             abort_if($client->closed_at || $coach->closed_at,403,'This conversation belongs to a closed account.');
@@ -205,9 +222,18 @@ class ChatController extends Controller
             if($request->filled('request_key')) { $existing=\App\Models\Message::where('sender_id',$request->user()->id)->where('request_key',$request->request_key)->first(); if($existing) {abort_unless($existing->chat_session_id===$s->id && $existing->content===$request->content,409); return $existing;} }
             $file=$request->file('attachment');$attachment=[];
             if($file) {
+                // Both participant rows are locked, serializing uploads by this sender
+                // across conversations. Legacy files count conservatively as 5 MB.
+                $uploads = \App\Models\Message::where('sender_id', $request->user()->id)->whereNotNull('attachment_path');
+                $total = (clone $uploads)->selectRaw('COALESCE(SUM(COALESCE(attachment_bytes, 5242880)), 0) AS bytes')->value('bytes');
+                $daily = (clone $uploads)->where('created_at', '>=', now()->subDay())->selectRaw('COALESCE(SUM(COALESCE(attachment_bytes, 5242880)), 0) AS bytes')->value('bytes');
+                if ($total + $file->getSize() > config('chat.stored_upload_bytes') || $daily + $file->getSize() > config('chat.daily_upload_bytes')) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['attachment'=>'Your attachment allowance has been reached. You can still send text messages. Please try later or contact support.']);
+                }
                 $path=$file->store('chat-attachments','local');
+                $storedPath = $path ?: null;
                 if(!$path) $this->billing->fail('The attachment could not be stored. Please retry.');
-                $attachment=['attachment_path'=>$path,'attachment_name'=>mb_substr(preg_replace('/[^\pL\pN ._()-]/u','_',basename($file->getClientOriginalName())),0,180),'attachment_mime'=>$file->getMimeType()];
+                $attachment=['attachment_path'=>$path,'attachment_bytes'=>$file->getSize(),'attachment_name'=>mb_substr(preg_replace('/[^\pL\pN ._()-]/u','_',basename($file->getClientOriginalName())),0,180),'attachment_mime'=>$file->getMimeType()];
             }
             $m=$s->messages()->create(['sender_id'=>$request->user()->id,'content'=>$request->content,'request_key'=>$request->input('request_key')]+$attachment);
             $recipient=$request->user()->id===$s->client_id?$s->counselor_id:$s->client_id;
@@ -215,6 +241,10 @@ class ChatController extends Controller
             $s->touch();
             return $m;
         });
+        } catch (\Throwable $error) {
+            if ($storedPath) \Illuminate\Support\Facades\Storage::disk('local')->delete($storedPath);
+            throw $error;
+        }
         $message->load('sender:id,name');
         // A broadcast outage must not make a saved message look unsent.
         try { broadcast(new MessageSent($message))->toOthers(); } catch (\Throwable $e) { report($e); }

@@ -26,7 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->validateCsrfTokens(except: ['payment-webhooks/stripe','payment-webhooks/paypal','payment-webhooks/maya','payment-webhooks/gcash']);
+        // Provider signatures authenticate this callback; browser routes retain CSRF protection.
+        $middleware->validateCsrfTokens(except: ['payment-webhooks/paymongo']);
         $middleware->alias(['role' => \App\Http\Middleware\RequireRole::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

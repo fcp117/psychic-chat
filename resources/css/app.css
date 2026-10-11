@@ -77,6 +77,36 @@
     background-image: radial-gradient(ellipse at 95% 0%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 42%), radial-gradient(ellipse at 0% 55%, color-mix(in srgb, var(--color-accent-soft) 65%, transparent), transparent 50%);
 }
 .app-content { min-width: 0; }
+.conversation-layout > * { min-width: 0; }
+/* Phone layouts reuse the desktop components, colors and controls. */
+@media (max-width: 767px) {
+    .conversation-layout { grid-template-columns: minmax(0, 1fr); overflow-x: visible; min-height: 0; }
+    .conversation-layout > aside { border-right: 0; }
+    .conversation-room > .conversation-sidebar,
+    .conversation-index > main,
+    .coach-directory:not(.mobile-detail) > section,
+    .coach-directory.mobile-detail > aside { display: none; }
+    .conversation-room > section { min-height: calc(100dvh - 8rem); padding: .75rem; }
+    .conversation-room [role="log"] { flex: 1 1 auto; min-height: 16rem; max-height: 55dvh; overflow-wrap: anywhere; }
+    .conversation-room header { padding: .75rem; }
+    .conversation-room footer form { gap: .5rem; }
+    .coach-directory > section { min-height: 0; }
+    .coach-directory > section > div.flex { padding: 1rem; }
+    .coach-directory > section > div.flex > div { padding: 1rem; }
+    .coach-directory h3 { font-size: 1.75rem; overflow-wrap: anywhere; }
+    /* Avoid iOS input zoom and allow native date controls to shrink. */
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; min-width: 0; max-width: 100%; }
+    dialog form > div.flex { flex-wrap: wrap; }
+    dialog form { overflow-wrap: anywhere; }
+    .app-content .grid > *, .app-content form { min-width: 0; }
+    .app-content .overflow-x-auto { max-width: 100%; -webkit-overflow-scrolling: touch; }
+    nav[aria-label="Main navigation"] > div > div { padding-inline: .625rem; }
+    nav[aria-label="Main navigation"] a[aria-label="Intuition Island home"] { gap: .375rem; }
+    nav[aria-label="Main navigation"] a[aria-label="Intuition Island home"] span { font-size: 1rem; letter-spacing: 0; }
+    nav[aria-label="Main navigation"] a[aria-label="Intuition Island home"] svg { width: 1.5rem; height: 1.5rem; }
+    .mobile-site-assistant { position: relative; inset: auto; margin: .75rem; }
+    .mobile-site-assistant > section { position: fixed; right: .75rem; bottom: 5rem; max-height: calc(100dvh - 7rem); }
+}
 .app-shell.shared-portrait-shell { background-image: none; background-color: transparent; }
 .app-content article, .app-content section.rounded-2xl {
     box-shadow: 0 6px 24px color-mix(in srgb, var(--color-overlay) 4%, transparent);

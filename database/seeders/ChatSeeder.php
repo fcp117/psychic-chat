@@ -17,6 +17,7 @@ class ChatSeeder extends Seeder
      */
     public function run(): void
     {
+        if (!app()->environment(['local', 'testing'])) throw new \RuntimeException('Demo conversations cannot be seeded outside local or testing environments.');
         // 1. Fetch the users you already seeded
         $client = User::where('role', 'user')->first();
         $counselor = User::where('role', 'counselor')->first();

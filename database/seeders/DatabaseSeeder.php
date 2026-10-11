@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (!app()->environment(['local', 'testing'])) throw new \RuntimeException('Development seeders cannot run outside local or testing environments.');
         $this->call([
             UserSeeder::class,
             DemoAccountsSeeder::class,

@@ -16,7 +16,7 @@ const statusLabel = status => status === 'active' ? 'Active now' : status === 'p
     <Head title="Chat" />
     <AuthenticatedLayout>
         <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
-            <div class="grid min-h-[calc(100svh-8.5rem)] overflow-x-auto rounded-3xl border border-border bg-surface shadow-xl shadow-primary/10 grid-cols-[minmax(15rem,28%)_minmax(24rem,1fr)]">
+            <div class="conversation-layout conversation-index grid min-h-[calc(100svh-8.5rem)] overflow-x-auto rounded-3xl border border-border bg-surface shadow-xl shadow-primary/10 grid-cols-[minmax(15rem,28%)_minmax(24rem,1fr)]">
                 <aside class="flex min-h-0 flex-col border-b border-border bg-page/60 border-b-0 border-r">
                     <ConversationHeader />
                     <div v-if="sessions.data.length" class="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4 pt-2">

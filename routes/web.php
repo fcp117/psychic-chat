@@ -91,12 +91,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reading-requests', [ChatController::class, 'requests'])->middleware('role:counselor')->name('chat.requests');
     Route::get('/chat/{chatSession}/agreement', [ChatController::class, 'agreement'])->name('chat.agreement');
     Route::get('/chat/{chatSession}', [ChatController::class, 'show'])->name('chat.room');
+    Route::get('/chat/{chatSession}/messages', [ChatController::class, 'history'])->middleware('throttle:60,1,chat-history:')->name('chat.history');
     
     Route::post('/chat/{chatSession}/accept', [ChatController::class, 'accept'])->name('chat.accept');
     Route::post('/chat/{chatSession}/end', [ChatController::class, 'end'])->name('chat.end');
     Route::post('/chat/{chatSession}/heartbeat', [ChatController::class, 'heartbeat'])->middleware('throttle:120,1,chat-heartbeat:')->name('chat.heartbeat');
     // POST: Handles the axios request when a user clicks "Send"
-    Route::post('/chat/{chatSession}/message', [ChatController::class, 'store'])->name('chat.message');
+    Route::post('/chat/{chatSession}/message', [ChatController::class, 'store'])->middleware('throttle:30,1,chat-message:')->name('chat.message');
 
 });
 
