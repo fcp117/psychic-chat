@@ -78,6 +78,44 @@
 }
 .app-content { min-width: 0; }
 .conversation-layout > * { min-width: 0; }
+.conversation-room, .conversation-index {
+    height: calc(100dvh - 8.5rem);
+    min-height: 0;
+    overflow: hidden;
+}
+.conversation-room > section { min-height: 0; overflow: hidden; }
+.conversation-room > section > :not([role="log"]) { flex-shrink: 0; }
+.conversation-room [role="log"] { min-height: 0; max-height: none; overflow-y: auto; overflow-wrap: anywhere; }
+.conversation-room [role="log"] > * { flex-shrink: 0; }
+@media (max-width: 1535px) {
+    nav.mobile-navigation-open {
+        position: fixed;
+        inset: 0;
+        height: 100vh;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        background: var(--color-page);
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        overscroll-behavior: none;
+    }
+    nav.mobile-navigation-open > div:first-child { flex-shrink: 0; width: 100%; }
+    .mobile-navigation-open .mobile-navigation-menu {
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+        max-width: 80rem;
+        margin: .75rem auto 0;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid var(--color-border);
+        border-radius: 1rem;
+        background: var(--color-surface);
+        overflow-wrap: anywhere;
+        padding-bottom: .75rem;
+    }
+}
 /* Phone layouts reuse the desktop components, colors and controls. */
 @media (max-width: 767px) {
     .conversation-layout { grid-template-columns: minmax(0, 1fr); overflow-x: visible; min-height: 0; }
@@ -86,8 +124,9 @@
     .conversation-index > main,
     .coach-directory:not(.mobile-detail) > section,
     .coach-directory.mobile-detail > aside { display: none; }
-    .conversation-room > section { min-height: calc(100dvh - 8rem); padding: .75rem; }
-    .conversation-room [role="log"] { flex: 1 1 auto; min-height: 16rem; max-height: 55dvh; overflow-wrap: anywhere; }
+    .conversation-room > section { min-height: 0; padding: .5rem; }
+    .conversation-room, .conversation-index { height: calc(100dvh - 7rem); min-height: 0; overflow: hidden; }
+    .conversation-room [role="log"] { flex: 1 1 auto; min-height: 0; max-height: none; overflow-wrap: anywhere; }
     .conversation-room header { padding: .75rem; }
     .conversation-room footer form { gap: .5rem; }
     .coach-directory > section { min-height: 0; }

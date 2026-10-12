@@ -33,6 +33,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'coachSite' => fn () => app(\App\Services\CoachSite::class)->settings(),
+            'socialLinks' => fn () => \Illuminate\Support\Facades\DB::table('social_links')->pluck('url', 'platform'),
             'features' => ['forecast' => (bool) config('features.forecast'), 'birthChart' => (bool) config('birth_chart.enabled')],
             'flash' => ['success' => fn () => $request->session()->get('success'), 'error' => fn () => $request->session()->get('error')],
             'auth' => [

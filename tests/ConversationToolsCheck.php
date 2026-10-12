@@ -25,7 +25,13 @@ try {
  $file=Illuminate\Http\UploadedFile::fake()->createWithContent('sample.pdf',"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF");
  $r=cr($client,['request_key'=>(string)Illuminate\Support\Str::uuid(),'content'=>'']);$r->files->set('attachment',$file);
  $uploaded=$chat->store($r,$s)->getData(true)['message'];ct(!array_key_exists('attachment_path',$uploaded)&&$uploaded['attachment_name']==='sample.pdf','private upload hides storage path');
- $attachment=App\Models\Message::findOrFail($uploaded['id']);$tools->attachment(cr($coach),$attachment);denied(fn()=>$tools->attachment(cr($other),$attachment),403,'attachment download requires membership');
+ $attachment=App\Models\Message::findOrFail($uploaded['id']);$pdf=$tools->attachment(cr($coach),$attachment);ct(str_starts_with($pdf->headers->get('Content-Disposition'),'attachment'),'PDF remains a download');denied(fn()=>$tools->attachment(cr($other),$attachment),403,'attachment download requires membership');
+ $png=base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aT1sAAAAASUVORK5CYII=');
+ Illuminate\Support\Facades\Storage::disk('local')->put('chat-attachments/preview.png',$png);
+ $picture=$s->messages()->create(['sender_id'=>$client->id,'content'=>'','attachment_path'=>'chat-attachments/preview.png','attachment_name'=>'preview.png','attachment_mime'=>'image/png']);
+ $preview=$tools->attachment(cr($coach),$picture);
+ ct(str_starts_with($preview->headers->get('Content-Disposition'),'inline') && $preview->headers->get('Content-Type')==='image/png','recipient can view private image inline');
+ denied(fn()=>$tools->attachment(cr($other),$picture),403,'outsider cannot view inline image');
  $bad=cr($client,['request_key'=>(string)Illuminate\Support\Str::uuid(),'content'=>'']);$bad->files->set('attachment',Illuminate\Http\UploadedFile::fake()->createWithContent('bad.html','<script>alert(1)</script>'));
  try{$chat->store($bad,$s);throw new RuntimeException('HTML upload accepted');}catch(Illuminate\Validation\ValidationException $e){ct(true,'HTML upload rejected');}
  $tools->invite(cr($coach),$s);$inv=Illuminate\Support\Facades\DB::table('reading_invitations')->first();ct($client->fresh()->credit_units===36000 && App\Models\ChatSession::count()===1,'invitation alone starts no reading or billing');

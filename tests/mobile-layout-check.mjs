@@ -24,6 +24,7 @@ const server=createServer((req,res)=>{
   if(pathname==='/inertia.js') return res.end(stub);
   if(pathname==='/style.css') return res.end(css);
   if(pathname==='/axios.js') return res.end('export default {post:async()=>new Promise(()=>{}),get:async()=>({data:{}})}');
+  if(pathname.startsWith('/lib/') && pathname.endsWith('.mjs')) return res.end(readFileSync(resolve(root,'resources/js',pathname.slice(1)),'utf8'));
   if(pathname.endsWith('.vue')) {
    const file=resolve(root,'resources/js',pathname.slice(1));
    assert.ok(file.startsWith(resolve(root,'resources/js')));
@@ -43,11 +44,15 @@ window.route=(name)=>name?'/'+name:{current:()=>false};
 window.fixturePage={auth:{user:{id:1,role:'user',name:'Client',available_credits:10}},coachSite:{},features:{}};
 const coach={id:2,name:'Test Spiritual Coach',rate_per_hour:60,rating:{average:5,count:2},show_rate_notice:true};
 const session={id:1,conversation_id:1,client_id:1,counselor_id:2,status:'completed',client:{id:1,name:'Client'},counselor:coach};
-const files={room:'Chat/Room',index:'Chat/Index',directory:'Chat/FindPsychic'};
+const files={room:'Chat/Room',index:'Chat/Index',directory:'Chat/FindPsychic',bookings:'Bookings/Index'};
 const key=new URL(location).searchParams.get('page')||'room';
 if(new URL(location).searchParams.get('role')==='counselor'){fixturePage.auth.user={id:2,role:'counselor',name:coach.name};}
 const props={session,sessions:key==='index'?{data:[session]}:[session],conversationId:1,initialMessages:[{id:1,sender_id:1,sender:{name:'Client'},content:'A message that should stay within the phone screen.',created_at:new Date().toISOString()}],currentUser:fixturePage.auth.user,psychics:{data:[coach],links:[]},filters:{q:''},billing:{disconnect_seconds:30}};
-const component=(await import('/Pages/'+files[key]+'.vue')).default;const app=createApp(component,props);app.config.globalProperties.route=window.route;app.mount('#app');
+props.initialMessages=Array.from({length:50},(_,i)=>({id:i+1,sender_id:1,sender:{name:'Client'},content:'An older message to verify the conversation scrolls internally.',created_at:new Date().toISOString()}));
+const future=new Date(Date.now()+86400000);future.setUTCHours(9,0,0,0);
+Object.assign(props,{bookings:{data:[],links:[]},coaches:[coach],availability:[{id:1,coach_id:2,is_available:true,starts_at:future.toISOString(),ends_at:new Date(+future+6*3600000).toISOString()}],busy:[],durations:[5,10,20,30,60],balance:50,reserved:0,selectedCoachId:2});
+fixturePage.errors={};
+const component=(await import('/Pages/'+files[key]+'.vue')).default;const app=createApp(component,props);app.config.globalProperties.route=window.route;app.config.globalProperties.$page={props:fixturePage};app.mount('#app');
 </script></html>`);
  } catch(error){res.statusCode=500;res.end(String(error));}
 });
@@ -55,15 +60,27 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({headless:true,...(process.env.MOBILE_TEST_BROWSER ? {executablePath:process.env.MOBILE_TEST_BROWSER} : {})});
 try {
  for(const width of [320,375,390,430,768,1280]) {
-  for(const screen of ['index','room','directory']) {
+  for(const screen of ['index','room','directory','bookings']) {
    for(const role of screen==='room'?['user','counselor']:['user']) {
-    const page=await browser.newPage({viewport:{width,height:844}});
+    const page=await browser.newPage({viewport:{width,height:width===375?667:844}});
     const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message);});
     page.on('response',async r=>{if(r.status()>=400)console.error(r.url(),await r.text());});
     await page.goto(`http://127.0.0.1:${server.address().port}/?page=${screen}&role=${role}`);
-    await page.locator('.conversation-layout').waitFor();
+    await page.locator(screen==='bookings'?'[aria-label="Coach availability calendar"]':'.conversation-layout').waitFor();
     assert.deepEqual(errors,[]);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${screen} ${width} page overflow`);
+    if(screen==='bookings') {
+     await page.getByRole('button',{name:/, available/}).first().click();
+     assert.ok(await page.getByText('Open times ·').isVisible());
+     await page.close();console.log(`PASS calendar at ${width}px`);continue;
+    }
+    if(screen==='room'){
+     const sizes=await page.locator('[role="log"]').evaluate(el=>({height:el.clientHeight,scroll:el.scrollHeight,room:el.closest('.conversation-room').getBoundingClientRect().height}));
+     assert.ok(sizes.height>80,'message viewport remains usable');
+     assert.ok(sizes.scroll>sizes.height,'older messages scroll internally');
+     assert.ok(sizes.room<844,'room fits viewport');
+     assert.ok(await page.getByRole('button',{name:'Send',exact:true}).isVisible());
+    }
     if(width<768) {
      if(screen==='room') { assert.equal(await page.locator('.conversation-sidebar').isVisible(),false);await page.getByText('← All conversations').waitFor(); }
      if(screen==='directory') {

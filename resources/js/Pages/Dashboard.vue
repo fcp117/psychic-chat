@@ -2,13 +2,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PublicHomeLayout from '@/Layouts/PublicHomeLayout.vue';
 import HeroOrbs from '@/Components/HeroOrbs.vue';
+import HomeSocialLinks from '@/Components/HomeSocialLinks.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 const page = usePage();
 const signedIn = computed(() => Boolean(page.props.auth?.user));
 const paths = computed(() => [
     { number: '00', title: 'One card. A little perspective.', text: signedIn.value ? 'Take a breath and reflect with 3 free daily draws, saved to your account.' : 'Take a breath and reflect with 1 free daily draw, or join for 3.', label: 'Explore your daily card', route: 'tarot.index', note: 'No minutes needed. Reflection, not prediction.' },
-    { number: '01', title: page.props.coachSite?.rainbow_only ? 'Meet Coach Rainbow' : 'A space to connect', text: page.props.coachSite?.rainbow_only ? 'Explore your questions through a private, thoughtful conversation with Rainbow.' : 'Return to your conversations and make space for what is on your mind.', label: page.props.coachSite?.rainbow_only ? 'Connect with Rainbow' : 'Explore your chats', route: page.props.coachSite?.rainbow_only ? 'psychics.index' : 'chat.index' },
+    { number: '01', title: page.props.coachSite?.rainbow_only ? 'Meet Coach Rainbow' : 'A space to connect', text: page.props.coachSite?.rainbow_only ? 'Explore your questions through a private, thoughtful conversation with Rainbow.' : 'Return to your conversations and make space for what is on your mind.', label: page.props.coachSite?.rainbow_only ? 'Connect with Rainbow' : 'Explore your readings', route: page.props.coachSite?.rainbow_only ? 'psychics.index' : 'chat.index' },
     { number: '02', title: 'A little perspective', text: 'Let the Moon light your way, one day at a time.', label: 'Explore Moonoscope', route: 'forecast' },
     { number: '03', title: 'Your reading balance', text: 'See your available minutes and stay ready for your next conversation.', label: 'View minutes', route: 'credits' },
 ].filter(item => item.route !== 'forecast' || page.props.features?.forecast));
@@ -44,9 +45,10 @@ onUnmounted(() => window.clearInterval(carouselTimer));
                     <h1 class="font-serif text-5xl leading-[1.08] tracking-tight text-content sm:text-6xl xl:text-7xl">Your journey.<br />A new perspective.</h1>
                     <p class="mt-7 max-w-lg text-base leading-7 text-muted">Slow down, explore your questions, and find space for a meaningful conversation.</p>
                     <div class="mt-9 flex flex-wrap gap-3">
-                        <Link :href="route('chat.index')" class="rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-on-primary hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">Go to Chat</Link>
+                        <Link :href="route('chat.index')" class="rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-on-primary hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">Go to Readings</Link>
                         <Link v-if="page.props.features?.forecast" :href="route('forecast')" class="rounded-full border border-border bg-surface px-7 py-3.5 text-sm font-semibold text-content hover:bg-surface-hover">Explore Moonoscope</Link>
                     </div>
+                    <HomeSocialLinks :links="page.props.socialLinks" />
                 </div></div>
                 <section class="w-full min-w-0 max-w-md px-4 sm:px-5 lg:justify-self-end" aria-label="Explore Intuition Island" aria-roledescription="carousel" @mouseenter="paused = true" @mouseleave="paused = false" @focusin="paused = true" @focusout="paused = false">
                   <div class="card-stack">

@@ -1,40 +1,66 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import UserAvatar from '@/Components/UserAvatar.vue';
 import PageBackdrop from '@/Components/PageBackdrop.vue';
 import NotificationCenter from '@/Components/NotificationCenter.vue';
-import ReadingSound from '@/Components/ReadingSound.vue';
-import ThemeSwitcher from '@/Components/ThemeSwitcher.vue';
+import ProfileMenu from '@/Components/ProfileMenu.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const page = usePage();
 const navigation = computed(() => [
     { label: 'Home', route: 'home', match: 'home' },
-    { label: 'Chat', route: 'chat.index', match: 'chat.*' },
-    { label: 'Bookings', route: 'bookings.index', match: 'bookings.*' },
+    { label: 'Readings', route: 'chat.index', match: 'chat.*' },
     ...(page.props.features?.forecast ? [{ label: 'Moonoscope', route: 'forecast', match: 'forecast' }] : []),
     { label: 'Minutes', route: 'credits', match: 'credits' },
     { label: 'About', route: 'about', match: 'about' },
-    { label: 'Support', route: 'support.index', match: 'support.*' },
-    ...(page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings', match: 'earnings' }] : []),
-    ...(page.props.auth.user.role === 'admin' ? [{ label: 'Admin Settings', route: 'admin.settings', match: 'admin.*' }] : []),
 ]);
 
 const showingNavigationDropdown = ref(false);
+const navigationToggle = ref(null);
+let savedScroll = 0, savedStyle = null, desktopQuery;
+const unlockPage = () => {
+    if (!savedStyle) return;
+    Object.assign(document.body.style, savedStyle);
+    savedStyle = null;
+    window.scrollTo({ top: savedScroll, behavior: 'instant' });
+};
+watch(showingNavigationDropdown, open => {
+    if (!open) { unlockPage(); return; }
+    savedScroll = window.scrollY;
+    savedStyle = Object.fromEntries(['position','top','left','right','width','overflow'].map(key => [key, document.body.style[key]]));
+    Object.assign(document.body.style, { position: 'fixed', top: `-${savedScroll}px`, left: '0', right: '0', width: '100%', overflow: 'hidden' });
+});
+const closeNavigation = () => { showingNavigationDropdown.value = false; };
+const escapeNavigation = event => {
+    if (event.key === 'Escape' && showingNavigationDropdown.value) {
+        closeNavigation(); navigationToggle.value?.focus();
+    }
+};
+const desktopNavigation = () => { if (desktopQuery.matches) closeNavigation(); };
+watch(() => page.url, closeNavigation);
+onMounted(() => {
+    desktopQuery = window.matchMedia('(min-width: 1536px)');
+    desktopQuery.addEventListener('change', desktopNavigation);
+    document.addEventListener('keydown', escapeNavigation);
+});
+onUnmounted(() => {
+    unlockPage();
+    desktopQuery?.removeEventListener('change', desktopNavigation);
+    document.removeEventListener('keydown', escapeNavigation);
+});
 </script>
 
 <template>
     <div>
         <div class="app-shell relative isolate min-h-screen" :class="page.component === 'Dashboard' ? 'bg-page' : 'shared-portrait-shell'">
             <PageBackdrop v-if="page.component !== 'Dashboard'" />
-            <nav class="z-50 bg-transparent px-3 py-4 sm:px-5" :class="page.component.startsWith('Admin/') ? 'relative' : 'sticky top-0'" aria-label="Main navigation">
+            <nav class="z-50 bg-transparent px-3 py-4 sm:px-5" :class="[page.component.startsWith('Admin/') ? 'relative' : 'sticky top-0', { 'mobile-navigation-open': showingNavigationDropdown }]" aria-label="Main navigation">
                 <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl">
-                    <div class="relative flex min-h-14 items-center justify-between rounded-2xl border border-border bg-surface px-4 shadow-lg shadow-primary/10 sm:px-5">
+                <div class="mx-auto flex max-w-7xl items-center gap-2 sm:gap-3">
+                    <div class="relative flex min-h-14 min-w-0 flex-1 items-center justify-between rounded-2xl border border-border bg-surface px-4 shadow-lg shadow-primary/10 sm:px-5">
                         <div class="flex min-w-0 flex-1 items-center gap-4">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
@@ -48,14 +74,10 @@ const showingNavigationDropdown = ref(false);
 
                             <!-- Navigation Links -->
                             <div class="hidden min-w-0 flex-1 items-center justify-center gap-1 2xl:flex">
-                                <Link v-for="item in navigation" :key="item.route" :href="route(item.route)" class="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-medium transition" :class="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*')) ? 'bg-accent-soft text-accent-text' : 'text-muted hover:bg-surface-hover hover:text-content'">{{ item.label }}</Link>
+                                <Link v-for="item in navigation" :key="item.route" :href="route(item.route)" class="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-medium transition" :class="route().current(item.match) || (item.route === 'chat.index' && (route().current('psychics.*') || route().current('bookings.*'))) ? 'bg-accent-soft text-accent-text' : 'text-muted hover:bg-surface-hover hover:text-content'">{{ item.label }}</Link>
                             </div>
                         </div>
 
-                        <div class="ml-auto mr-2 flex shrink-0 items-center gap-3 2xl:mr-0 2xl:pl-4">
-                            <NotificationCenter />
-                            <ReadingSound v-if="page.props.auth.user.role === 'counselor'" />
-                        </div>
                         <div class="hidden 2xl:ms-3 2xl:flex 2xl:items-center">
                             <!-- Settings Dropdown -->
                             <div class="relative ms-3">
@@ -85,25 +107,7 @@ const showingNavigationDropdown = ref(false);
                                     </template>
 
                                     <template #content>
-                                        <DropdownLink v-if="page.props.features?.birthChart" :href="route('birth-chart')">Your birth chart</DropdownLink>
-                                        <DropdownLink :href="route('reviews.index')">Reading feedback</DropdownLink>
-                                        <DropdownLink :href="route('tarot.index')">Your daily card</DropdownLink>
-                                        <DropdownLink v-if="page.props.auth.user.role === 'user' && page.props.coachSite?.applications_open" :href="route('counselor.apply')">Become a Spiritual Coach</DropdownLink>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
-                                        </DropdownLink>
-                                        <DropdownLink :href="route('terms')">Terms of Service</DropdownLink>
-                                        <DropdownLink :href="route('privacy')">Privacy Notice</DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </DropdownLink>
-                                        <ThemeSwitcher />
+                                        <ProfileMenu />
                                     </template>
                                 </Dropdown>
                             </div>
@@ -111,7 +115,7 @@ const showingNavigationDropdown = ref(false);
 
                         <!-- Hamburger -->
                         <div class="-me-2 flex items-center 2xl:hidden">
-                            <button type="button" aria-label="Toggle navigation" :aria-expanded="showingNavigationDropdown"
+                            <button ref="navigationToggle" type="button" aria-label="Toggle navigation" aria-controls="mobile-navigation-menu" :aria-expanded="showingNavigationDropdown"
                                 @click="
                                     showingNavigationDropdown =
                                         !showingNavigationDropdown
@@ -150,6 +154,7 @@ const showingNavigationDropdown = ref(false);
                             </button>
                         </div>
                     </div>
+                    <NotificationCenter class="shrink-0" />
                 </div>
 
                 <!-- Responsive Navigation Menu -->
@@ -158,10 +163,12 @@ const showingNavigationDropdown = ref(false);
                         block: showingNavigationDropdown,
                         hidden: !showingNavigationDropdown,
                     }"
-                    class="2xl:hidden"
+                    id="mobile-navigation-menu"
+                    class="mobile-navigation-menu 2xl:hidden"
+                    @click="event => { if (event.target.closest('a') || event.target.closest('button[type=submit]')) closeNavigation(); }"
                 >
                     <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink v-for="item in navigation" :key="item.route" :href="route(item.route)" :active="route().current(item.match) || (item.route === 'chat.index' && route().current('psychics.*'))">{{ item.label }}</ResponsiveNavLink>
+                        <ResponsiveNavLink v-for="item in navigation" :key="item.route" :href="route(item.route)" :active="route().current(item.match) || (item.route === 'chat.index' && (route().current('psychics.*') || route().current('bookings.*')))">{{ item.label }}</ResponsiveNavLink>
                     </div>
 
                     <!-- Responsive Settings Options -->
@@ -179,23 +186,7 @@ const showingNavigationDropdown = ref(false);
                             </div>
                         </div>
 
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink v-if="page.props.features?.birthChart" :href="route('birth-chart')">Your birth chart</ResponsiveNavLink>
-                            <ResponsiveNavLink v-if="page.props.auth.user.role === 'user' && page.props.coachSite?.applications_open" :href="route('counselor.apply')">Become a Spiritual Coach</ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('terms')">Terms of Service</ResponsiveNavLink>
-                            <ResponsiveNavLink :href="route('privacy')">Privacy Notice</ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                            <ThemeSwitcher />
-                        </div>
+                        <div class="mt-3"><ProfileMenu mobile /></div>
                     </div>
                 </div>
             </nav>
@@ -211,7 +202,7 @@ const showingNavigationDropdown = ref(false);
             </header>
 
             <!-- Page Content -->
-            <main class="app-content">
+            <main class="app-content" :inert="showingNavigationDropdown">
                 <slot />
             </main>
         </div>

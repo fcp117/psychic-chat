@@ -102,6 +102,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/social-links', [\App\Http\Controllers\SocialLinksController::class, 'index'])->name('social-links');
+    Route::put('/social-links', [\App\Http\Controllers\SocialLinksController::class, 'update'])->middleware('throttle:20,1,social-links:')->name('social-links.update');
     Route::get('/moonoscope', [\App\Http\Controllers\MoonoscopeController::class,'adminIndex'])->name('moonoscope');
     Route::patch('/moonoscope/settings', [\App\Http\Controllers\MoonoscopeController::class,'settings'])->name('moonoscope.settings');
     Route::put('/moonoscope/templates', [\App\Http\Controllers\MoonoscopeController::class,'templates'])->name('moonoscope.templates');
@@ -134,6 +136,10 @@ Route::middleware(['auth','verified'])->group(function() {
     Route::post('/notifications/read',[\App\Http\Controllers\NotificationController::class,'read'])->middleware('throttle:60,1')->name('notifications.read');
 });
 require __DIR__.'/auth.php';
+Route::middleware('auth')->group(function () {
+    Route::get('/preferences/music', [\App\Http\Controllers\MusicPreferenceController::class, 'show'])->name('music.show');
+    Route::put('/preferences/music', [\App\Http\Controllers\MusicPreferenceController::class, 'update'])->middleware('throttle:60,1')->name('music.update');
+});
 Route::post('/chat/{chatSession}/report', [\App\Http\Controllers\ReportController::class,'store'])->middleware(['auth','verified','throttle:5,60,chat-report:'])->name('chat.report');
 Route::middleware(['auth','verified','role:admin'])->group(function () {
     Route::get('/admin/reports',[\App\Http\Controllers\ReportController::class,'index'])->name('admin.reports');

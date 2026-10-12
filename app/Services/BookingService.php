@@ -37,7 +37,8 @@ class BookingService {
    // Ten protected minutes after each slot allow the approved late-arrival grace without double-booking.
    $end=$start->copy()->addMinutes($minutes+10);
    if($previous){$previous=Booking::whereKey($previous->id)->lockForUpdate()->firstOrFail();if($previous->client_id!==$client->id||$previous->coach_id!==$coach->id||$previous->status!=='booked'||now()->gt($previous->starts_at->copy()->subHour()))$this->fail('Free rescheduling closes one hour before the appointment.');}
-   if(!DB::table('coach_availability')->where('coach_id',$coach->id)->where('starts_at','<=',$start)->where('ends_at','>=',$end)->exists())$this->fail('That time is outside the coach’s available hours (including the 10-minute buffer).');
+   if(!DB::table('coach_availability')->where('coach_id',$coach->id)->where('is_available',true)->where('starts_at','<=',$start)->where('ends_at','>=',$end)->exists())$this->fail('That time is outside the coach’s available hours (including the 10-minute buffer).');
+   if(DB::table('coach_availability')->where('coach_id',$coach->id)->where('is_available',false)->where('starts_at','<',$end)->where('ends_at','>',$start)->exists())$this->fail('The coach has marked this time unavailable.');
    $overlap=Booking::whereIn('status',['booked','joining','active','review'])->where(fn($q)=>$q->where('coach_id',$coach->id)->orWhere('client_id',$client->id))->where('starts_at','<',$end)->where('ends_at','>',$start)->when($previous,fn($q)=>$q->where('id','!=',$previous->id))->exists();
    if($overlap)$this->fail('This slot overlaps another appointment. Please choose another time.');
    if(ChatSession::where(fn($q)=>$q->where('client_id',$client->id)->orWhere('counselor_id',$coach->id))->where('status','active')->exists())$this->fail('Finish the active reading before booking.');

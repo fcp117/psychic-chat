@@ -50,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
+            'music_muted' => 'boolean',
             'email_verified_at' => 'datetime',
             'birthdate' => 'date:Y-m-d',
             'password' => 'hashed',

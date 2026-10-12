@@ -35,6 +35,9 @@ class ConversationToolsController extends Controller {
  }
  public function attachment(Request $r,Message $message) {
   $this->member($r,$message->chatSession);abort_unless($message->attachment_path,404);
+  if (!$r->boolean('download') && in_array($message->attachment_mime,['image/jpeg','image/png','image/webp'],true)) {
+   return Storage::disk('local')->response($message->attachment_path,$message->attachment_name,['Content-Type'=>$message->attachment_mime,'Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff','Content-Security-Policy'=>"default-src 'none'; sandbox"], 'inline');
+  }
   return Storage::disk('local')->download($message->attachment_path,$message->attachment_name,['Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff']);
  }
  public function invite(Request $r,ChatSession $s) {

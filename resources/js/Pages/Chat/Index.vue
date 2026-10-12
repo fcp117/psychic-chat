@@ -13,7 +13,7 @@ const initials = session => (partner(session)?.name || 'I').split(/\s+/).map(par
 const statusLabel = status => status === 'active' ? 'Active now' : status === 'pending' ? 'Request pending' : 'Free messaging';
 </script>
 <template>
-    <Head title="Chat" />
+    <Head title="Readings" />
     <AuthenticatedLayout>
         <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
             <div class="conversation-layout conversation-index grid min-h-[calc(100svh-8.5rem)] overflow-x-auto rounded-3xl border border-border bg-surface shadow-xl shadow-primary/10 grid-cols-[minmax(15rem,28%)_minmax(24rem,1fr)]">
@@ -30,7 +30,7 @@ const statusLabel = status => status === 'active' ? 'Active now' : status === 'p
                     <div v-else class="px-5 pb-6 pt-3"><p class="text-sm font-medium text-content">No conversations yet</p><p class="mt-1 text-sm leading-6 text-muted">{{ user.role === 'counselor' ? 'Client messages and reading requests will appear here. You can reply even when a client is offline.' : 'Choose a coach to send a free message or request a reading.' }}</p><Link v-if="user.role === 'user'" :href="route('psychics.index')" class="mt-4 inline-flex text-sm font-semibold text-accent-text hover:underline">Find a Spiritual Coach →</Link></div>
                 </aside>
                 <main class="flex min-h-[25rem] items-center justify-center bg-gradient-to-br from-page via-surface to-accent-soft/40 p-6 sm:p-10">
-                    <div class="max-w-md text-center"><span class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-3xl text-accent-text" aria-hidden="true">✦</span><p class="mt-6 text-xs font-semibold uppercase tracking-[0.24em] text-accent-text">Intuition Island chat</p><h2 class="mt-3 font-serif text-3xl text-content">Choose a conversation</h2><p class="mt-4 text-sm leading-7 text-muted">{{ user.role === 'counselor' ? 'Select a client conversation to reply, keep private notes, or invite them to a paid reading. Enable sound alerts to hear incoming requests.' : 'Select a conversation to send a free message, or find a coach to start a new conversation.' }}</p><Link v-if="user.role === 'user'" :href="route('psychics.index')" class="mt-7 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:bg-primary-hover">Find a Spiritual Coach</Link></div>
+                    <div class="max-w-md text-center"><span class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-3xl text-accent-text" aria-hidden="true">✦</span><p class="mt-6 text-xs font-semibold uppercase tracking-[0.24em] text-accent-text">Intuition Island readings</p><h2 class="mt-3 font-serif text-3xl text-content">Choose a conversation</h2><p class="mt-4 text-sm leading-7 text-muted">{{ user.role === 'counselor' ? 'Select a client conversation to reply, keep private notes, or invite them to a paid reading. Enable sound alerts to hear incoming requests.' : 'Select a conversation to send a free message, or find a coach to start a new conversation.' }}</p><Link v-if="user.role === 'user'" :href="route('psychics.index')" class="mt-7 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:bg-primary-hover">Find a Spiritual Coach</Link></div>
                 </main>
             </div>
         </div>
