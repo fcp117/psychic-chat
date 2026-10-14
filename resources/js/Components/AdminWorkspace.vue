@@ -4,6 +4,8 @@ import { Link, usePage } from '@inertiajs/vue3';
 const props=defineProps({ section: { type:String, default:'users' } });
 const page=usePage();
 const sections=computed(()=>[
+ ['schedule','Coach calendar','All coach schedules and availability'],
+ ['email','Service emails','Send individual template-based service messages'],
  ['social-links','Social links','Manage Facebook and Instagram links on Home'],
  ['birth-chart','Birth charts','Review and edit report interpretations'],
  ['moonoscope','Moonoscope','Daily sky facts, messages and publishing'],
@@ -15,16 +17,16 @@ const sections=computed(()=>[
  ['reviews','Coach reviews','Ratings and feedback, organized by coach'],['reports','Reports & access','Review reports and manage blocks'],['tarot','Tarot cards','Create and curate the daily reflection deck'],['health','System health','Monitor site incidents'],
  ['pricing','Pricing & billing','Minute pricing and packages'],['transactions','Balance transactions','Review balance changes'],
  ['sessions','Chat sessions','Manage readings'],['forecasts','Forecasts','Manage published forecasts'],['audit','Audit history','Track administrative changes'],
-].filter(([key])=>!['forecasts','moonoscope'].includes(key)||page.props.features?.forecast));
+].filter(([key])=>(page.props.staffSections?.includes('*')||page.props.staffSections?.includes(key))&&(!['forecasts','moonoscope'].includes(key)||page.props.features?.forecast)));
 const active=computed(()=>sections.value.find(([key])=>key===props.section)||sections.value[0]);
 </script>
 <template>
  <main class="mx-auto max-w-[90rem] px-3 py-6 sm:px-6">
   <div class="overflow-hidden rounded-3xl border border-border bg-surface/95 shadow-xl backdrop-blur-xl lg:grid lg:grid-cols-[14rem_minmax(0,1fr)]">
    <aside class="border-b border-border bg-page/70 p-4 lg:border-b-0 lg:border-r">
-    <div class="px-2 pb-4 pt-2"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">Administration</p><h1 class="mt-2 font-serif text-2xl">Admin Settings</h1></div>
+    <div class="px-2 pb-4 pt-2"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-text">{{page.props.auth.user.role==='admin'?'Administration':'Staff workspace'}}</p><h1 class="mt-2 font-serif text-2xl">{{ {admin:'Admin Settings',encoder:'Content workspace',manager:'Manager workspace',support:'Support workspace'}[page.props.auth.user.role] }}</h1></div>
     <nav aria-label="Admin sections" class="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
-     <Link v-for="[key,label] in sections" :key="key" :href="key==='social-links'?route('admin.social-links'):key==='birth-chart'?route('admin.birth-chart'):key==='moonoscope'?route('admin.moonoscope'):key==='bookings'?route('bookings.index'):key==='privacy'?route('privacy.requests'):key==='support'?route('support.index'):key==='coach-site'?route('admin.coach-site'):key==='reviews'?route('admin.reviews'):key==='reports'?route('admin.reports'):key==='tarot'?route('admin.tarot'):route('admin.settings',{section:key})" :aria-current="section===key?'page':undefined" class="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" :class="section===key?'bg-accent-soft text-accent-text':'text-muted hover:bg-surface-hover hover:text-content'"><span>{{ label }}</span><span v-if="section===key" class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span></Link>
+     <Link v-for="[key,label] in sections" :key="key" :href="key==='schedule'?route('staff.schedule'):key==='email'?route('staff.emails'):key==='health'&&page.props.auth.user.role!=='admin'?route('staff.health'):key==='social-links'?route('admin.social-links'):key==='birth-chart'?route('admin.birth-chart'):key==='moonoscope'?route('admin.moonoscope'):key==='bookings'?route('bookings.index'):key==='privacy'?route('privacy.requests'):key==='support'?route('support.index'):key==='coach-site'?route('admin.coach-site'):key==='reviews'?route('admin.reviews'):key==='reports'?route('admin.reports'):key==='tarot'?route('admin.tarot'):route('admin.settings',{section:key})" :aria-current="section===key?'page':undefined" class="flex min-h-11 shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" :class="section===key?'bg-accent-soft text-accent-text':'text-muted hover:bg-surface-hover hover:text-content'"><span>{{ label }}</span><span v-if="section===key" class="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true"></span></Link>
     </nav>
    </aside>
    <div class="min-w-0">

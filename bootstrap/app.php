@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Provider signatures authenticate this callback; browser routes retain CSRF protection.
         $middleware->validateCsrfTokens(except: ['payment-webhooks/paymongo']);
-        $middleware->alias(['role' => \App\Http\Middleware\RequireRole::class]);
+        $middleware->alias(['role' => \App\Http\Middleware\RequireRole::class, 'staff' => \App\Http\Middleware\RequireStaffPermission::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->report(function (\Throwable $e) { \App\Services\IncidentReporter::record($e); });

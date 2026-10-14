@@ -80,7 +80,7 @@ try {
     $admin = $createUser('admin');
     $controller = app(App\Http\Controllers\AdminTarotController::class);
     $data = ['name' => 'Uploaded card', 'category' => 'Major Arcana', 'keywords' => 'Reflection', 'meaning' => 'A meaning', 'guidance' => 'A small step', 'reflection' => 'A question?', 'is_active' => true];
-    $image = fn () => new Illuminate\Http\UploadedFile(public_path('images/tarot/violet-tides/I.png'), 'card.png', 'image/png', null, true);
+    $image = fn () => Illuminate\Http\UploadedFile::fake()->image('card.png',64,96);
     $controller->store(tarotRequest($admin, $data, ['image' => $image()]));
     $uploaded = App\Models\TarotCard::latest('id')->first();
     $oldImage = $uploaded->image_path;
@@ -91,7 +91,7 @@ try {
     tarotCheck(Illuminate\Support\Facades\Storage::disk('public')->exists($oldImage), 'old artwork retained for snapshots');
     tarotCheck(Illuminate\Support\Facades\DB::table('admin_audits')->where('action', 'tarot.save')->count() === 2, 'admin edits audited');
     tarotRejected(fn () => $controller->store(tarotRequest($admin, $data)), 'new card requires image');
-    $badImage = new Illuminate\Http\UploadedFile(__FILE__, 'bad.svg', 'image/svg+xml', null, true);
+    $badImage = Illuminate\Http\UploadedFile::fake()->createWithContent('bad.svg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
     tarotRejected(fn () => $controller->update(tarotRequest($admin, $data, ['image' => $badImage]), $uploaded), 'unsafe upload rejected');
     foreach (['user', 'counselor'] as $role) {
         try { app(App\Http\Middleware\RequireRole::class)->handle(tarotRequest($createUser($role), []), fn () => true, 'admin'); throw new RuntimeException('Unauthorized admin access'); }
@@ -99,7 +99,7 @@ try {
     }
     foreach (['admin.tarot', 'admin.tarot.store', 'admin.tarot.update'] as $name) {
         $middleware = app('router')->getRoutes()->getByName($name)->gatherMiddleware();
-        tarotCheck(in_array('auth', $middleware) && in_array('verified', $middleware) && in_array('role:admin', $middleware), "$name guarded");
+        tarotCheck(in_array('auth', $middleware) && in_array('verified', $middleware) && in_array('staff:content', $middleware), "$name guarded");
     }
     $publicController = app(App\Http\Controllers\TarotController::class);
     tarotRejected(fn () => $publicController->draw(tarotRequest(null, ['request_token' => $uuid()]), $service), 'missing guest cookie rejected');

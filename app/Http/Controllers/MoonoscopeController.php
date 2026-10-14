@@ -7,7 +7,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 class MoonoscopeController extends Controller {
  private function enabled(): void {abort_unless(config('features.forecast'),404);}
- private function admin(Request $r): void {$this->enabled();abort_unless($r->user()?->role==='admin',403);}
+ private function admin(Request $r): void {$this->enabled();abort_unless(\App\Services\StaffAccess::allows($r->user(),'content'),403);}
  private function decode($d){if(!$d)return null;foreach(['facts','lines','published_lines'] as $k)$d->$k=$d->$k?json_decode($d->$k,true):null;return $d;}
  public function index(Request $r){
   $this->enabled();$today=now('Asia/Manila')->toDateString();

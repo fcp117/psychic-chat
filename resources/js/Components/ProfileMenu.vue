@@ -8,7 +8,7 @@ defineProps({ mobile: Boolean });
 const page = usePage();
 const workspace = computed(() => page.props.auth.user.role === 'admin'
     ? [{ label: 'Admin Settings', route: 'admin.settings' }]
-    : page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings' }] : []);
+    : ['encoder','manager','support'].includes(page.props.auth.user.role) ? [{label:'Staff workspace',route:'staff.home'}] : page.props.auth.user.role === 'counselor' ? [{ label: 'Earnings', route: 'earnings' }] : []);
 const readings = computed(() => [
     { label: 'Daily card', route: 'tarot.index' },
     ...(page.props.features?.birthChart ? [{ label: 'Birth chart', route: 'birth-chart' }] : []),

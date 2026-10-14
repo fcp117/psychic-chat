@@ -27,6 +27,7 @@ class AdminTarotController extends Controller
 
     private function save(Request $request, TarotCard $card)
     {
+        abort_unless(\App\Services\StaffAccess::allows($request->user(),'content'),403);
         abort_if($card->exists && $card->is_archived, 404);
         $contentRule = $request->boolean('is_active') ? 'required' : 'nullable';
         $data = $request->validate([

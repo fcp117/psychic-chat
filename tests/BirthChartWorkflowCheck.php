@@ -33,7 +33,7 @@ try {
  birthOk(DB::table('admin_audits')->where('action','birth_chart.template')->count()===1,'edit audited');
  birthReject(fn()=>$c->update(birthRequest($admin,['body'=>'Stale','version'=>1,'reviewed'=>true]),$id),'stale update rejected');
  config(['birth_chart.enabled'=>false]);birthReject(fn()=>$c->index(birthRequest($admin),$s),'disabled feature blocks direct report access');
- foreach(['birth-chart','admin.birth-chart','admin.birth-chart.update'] as $name){$mw=app('router')->getRoutes()->getByName($name)->gatherMiddleware();birthOk(in_array('auth',$mw)&&in_array('verified',$mw),$name.' authenticated and verified');if(str_starts_with($name,'admin.'))birthOk(in_array('role:admin',$mw),$name.' admin only');}
+ foreach(['birth-chart','admin.birth-chart','admin.birth-chart.update'] as $name){$mw=app('router')->getRoutes()->getByName($name)->gatherMiddleware();birthOk(in_array('auth',$mw)&&in_array('verified',$mw),$name.' authenticated and verified');if(str_starts_with($name,'admin.'))birthOk(in_array('staff:content',$mw),$name.' content staff only');}
  echo "ALL BIRTH CHART WORKFLOW CHECKS PASSED (isolated database)\n";
 }catch(Throwable $e){$failed=true;fwrite(STDERR,$e->getMessage()."\n".$e->getTraceAsString());}
 finally{DB::disconnect('sqlite');unlink($db);}exit($failed?1:0);

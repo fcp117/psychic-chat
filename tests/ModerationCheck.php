@@ -12,16 +12,26 @@ try {
  $user=App\Models\User::forceCreate(['name'=>'User','email'=>'u@test.invalid','password'=>'test','role'=>'user','last_seen_ip'=>'8.8.8.8']);
  $coach=App\Models\User::forceCreate(['name'=>'Coach','email'=>'c@test.invalid','password'=>'test','role'=>'counselor']);
  $admin=App\Models\User::forceCreate(['name'=>'Admin','email'=>'a@test.invalid','password'=>'test','role'=>'admin']);
+ $support=App\Models\User::forceCreate(['name'=>'Support','email'=>'support@test.invalid','password'=>'test','role'=>'support']);
+ $manager=App\Models\User::forceCreate(['name'=>'Manager','email'=>'manager@test.invalid','password'=>'test','role'=>'manager']);
+ $approve=function($id,$action)use($support,$manager){
+  $workflow=app(App\Http\Controllers\ReportWorkflowController::class);
+  $workflow->recommend(req($support,['action'=>$action,'note'=>'Support investigated and recommends this action.','confirm_ip'=>true]),$id);
+  $workflow->manager(req($manager,['approve'=>true,'note'=>'Manager reviewed the evidence and approves.']),$id);
+ };
  $s=App\Models\ChatSession::forceCreate(['client_id'=>$user->id,'counselor_id'=>$coach->id,'status'=>'completed']);
  $controller=app(App\Http\Controllers\ReportController::class);
  $controller->store(req($coach,['reason'=>'harassment','details'=>'A test report with enough detail.']),$s);
  $id=Illuminate\Support\Facades\DB::table('user_reports')->value('id');
  check((bool)$id,'coach can report participant');
  try{$controller->store(req($admin,['reason'=>'other','details'=>'Unauthorized test report']),$s);throw new RuntimeException('Unauthorized report accepted');}catch(Symfony\Component\HttpKernel\Exception\HttpException $e){check($e->getStatusCode()===403,'nonparticipant denied');}
+ $approve($id,'suspend');
  $controller->review(req($admin,['action'=>'suspend','note'=>'Confirmed test abuse']),$id);
  check($user->fresh()->is_suspended,'account suspended');
+ $approve($id,'restore');
  $controller->review(req($admin,['action'=>'restore','note'=>'Restored after review']),$id);
  check(!$user->fresh()->is_suspended,'account restored');
+ $approve($id,'block_ip');
  $controller->review(req($admin,['action'=>'block_ip','note'=>'Confirmed repeat abuse','confirm_ip'=>true]),$id);
  check(Illuminate\Support\Facades\DB::table('blocked_ips')->where('ip','8.8.8.8')->exists(),'exact observed IP blocked');
  $r=Illuminate\Http\Request::create('/login','GET',[],[],[],['REMOTE_ADDR'=>'8.8.8.8']);

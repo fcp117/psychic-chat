@@ -41,7 +41,7 @@ try {
  Http::swap(new Illuminate\Http\Client\Factory());Http::preventStrayRequests();Http::fake(['api.anthropic.com/*'=>Http::response(['error'=>'unavailable'],503)]);moonReject(fn()=>$s->draft('ai',$calc),'provider failure safely reported');
  $save['version']=3;$save['action']='unpublish';$c->save(moonRequest($admin,$save),$d->id,$s);moonOk($payload()['daily']===null,'unpublishing hides public text and retains draft');
  config(['features.forecast'=>false]);moonReject(fn()=>$c->index(moonRequest()),'visibility switch blocks public direct URL');moonReject(fn()=>$c->adminIndex(moonRequest($admin),$s),'visibility switch blocks admin direct URL');
- foreach(['admin.moonoscope','admin.moonoscope.settings','admin.moonoscope.templates','admin.moonoscope.generate','admin.moonoscope.save'] as $route)moonOk(in_array('role:admin',app('router')->getRoutes()->getByName($route)->gatherMiddleware()),$route.' protected');
+ foreach(['admin.moonoscope','admin.moonoscope.settings','admin.moonoscope.templates','admin.moonoscope.generate','admin.moonoscope.save'] as $route)moonOk(in_array('staff:content',app('router')->getRoutes()->getByName($route)->gatherMiddleware()),$route.' protected');
  echo "ALL MOONOSCOPE WORKFLOW CHECKS PASSED (isolated database; no live AI calls)\n";
 }catch(Throwable $e){$failed=true;fwrite(STDERR,$e->getMessage()."\n".$e->getTraceAsString());}
 finally{DB::disconnect('sqlite');unlink($db);}exit($failed?1:0);

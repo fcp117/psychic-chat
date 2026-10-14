@@ -18,11 +18,11 @@ class AdminController extends Controller {
         $v=$request->validate(['q'=>'nullable|string|max:100','verification'=>['nullable',Rule::in(['all','verified','unverified'])],'section'=>['nullable',Rule::in(['users','pricing','transactions','sessions','forecasts','audit','applications','health'])]]);
         $verification=$v['verification'] ?? 'all'; $q=trim($v['q'] ?? ''); $section=$v['section'] ?? 'users';
         abort_if($section === 'forecasts' && !config('features.forecast'), 404);
-        $data=['section'=>$section,'filters'=>['q'=>$q,'verification'=>$verification],'settings'=>$this->billing->settings()];
+        $data=['managers'=>User::where('role','manager')->where('is_suspended',false)->get(['id','name']),'section'=>$section,'filters'=>['q'=>$q,'verification'=>$verification],'settings'=>$this->billing->settings()];
         if ($section==='applications') $data['applications']=DB::table('counselor_applications as a')->join('users as u','u.id','=','a.user_id')->select('a.*','u.name','u.email')->orderByRaw("CASE WHEN a.status='pending' THEN 0 ELSE 1 END")->orderByDesc('a.updated_at')->paginate(15)->withQueryString();
         if ($section==='health') $data['incidents']=DB::table('system_incidents')->orderByDesc('created_at')->paginate(30)->withQueryString();
         if ($section==='pricing') { $data['shop']=app(\App\Services\CreditShop::class)->settings(); $data['packages']=DB::table('credit_packages')->orderBy('id')->get(); $data['paymentMethods']=app(\App\Services\PaymentGateway::class)->methods(); }
-        if ($section==='users') $data['users']=User::when($verification==='verified',fn($query)=>$query->whereNotNull('email_verified_at'))->when($verification==='unverified',fn($query)=>$query->whereNull('email_verified_at'))->when($q!=='',fn($query)=>$query->where(fn($sub)=>$sub->where('name','like','%'.$q.'%')->orWhere('email','like','%'.$q.'%')))->orderBy('id')->paginate(15,['id','name','email','email_verified_at','birthdate','created_at','welcome_eligible','role','credit_units','available_credits','rate_per_hour','is_approved','is_suspended'])->withQueryString();
+        if ($section==='users') $data['users']=User::when($verification==='verified',fn($query)=>$query->whereNotNull('email_verified_at'))->when($verification==='unverified',fn($query)=>$query->whereNull('email_verified_at'))->when($q!=='',fn($query)=>$query->where(fn($sub)=>$sub->where('name','like','%'.$q.'%')->orWhere('email','like','%'.$q.'%')))->orderBy('id')->paginate(15,['id','name','email','email_verified_at','birthdate','created_at','welcome_eligible','role','credit_units','available_credits','rate_per_hour','is_approved','is_suspended','manager_id'])->withQueryString();
         if ($section==='users') {
             $eligible=app(\App\Services\UnverifiedAccountCleanup::class)->eligible()->whereIn('id',$data['users']->pluck('id'))->pluck('id')->all();
             $data['users']->through(function($u)use($eligible){
@@ -66,7 +66,7 @@ class AdminController extends Controller {
         return back()->with('success','Pricing saved. Existing requests and readings keep their agreed rates.');
     }
     public function user(Request $r, User $user) {
-        $v=$r->validate(['role'=>['required',Rule::in(['user','counselor','admin'])],'is_approved'=>'required|boolean','is_suspended'=>'required|boolean','welcome_eligible'=>'sometimes|boolean','rate_per_hour'=>'nullable|integer|min:1|max:100000']);
+        $v=$r->validate(['role'=>['required',Rule::in(\App\Services\StaffAccess::ROLES)],'manager_id'=>['nullable',Rule::exists('users','id')->where('role','manager')->where('is_suspended',false)],'is_approved'=>'required|boolean','is_suspended'=>'required|boolean','welcome_eligible'=>'sometimes|boolean','rate_per_hour'=>'nullable|integer|min:1|max:100000']);
         DB::transaction(function () use ($r,$user,$v) {
             $u=User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $old=$u->only(array_keys($v));
@@ -74,7 +74,7 @@ class AdminController extends Controller {
             if ($u->role==='admin' && ($v['role']!=='admin' || $v['is_suspended']) && User::where('role','admin')->where('is_suspended',false)->count()<=1) $this->billing->fail('At least one active admin must remain.');
             if (($v['role']!==$u->role || $v['is_suspended'] || !$v['is_approved'] && $u->role==='counselor') && ChatSession::where(fn($q)=>$q->where('client_id',$u->id)->orWhere('counselor_id',$u->id))->whereIn('status',['pending','active'])->exists()) $this->billing->fail('End this account’s open readings in Chat Sessions first.');
             if(array_key_exists('welcome_eligible',$v))$u->welcome_eligible=$v['welcome_eligible'];
-            $u->role=$v['role']; $u->is_suspended=$v['is_suspended'];
+            $u->manager_id=$v['role']==='counselor'?($v['manager_id']??null):null; $u->role=$v['role']; $u->is_suspended=$v['is_suspended'];
             $u->is_approved=$v['role']==='counselor' && $v['is_approved'];
             $u->rate_per_hour=$v['role']==='counselor' ? $v['rate_per_hour'] : null;
             $u->save();

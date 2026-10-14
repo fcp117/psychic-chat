@@ -19,8 +19,8 @@ Route::get('/', function () {
 
 Route::get('/about', fn () => Inertia::render('About'))->name('about');
 Route::get('/birth-chart', [\App\Http\Controllers\BirthChartController::class,'index'])->middleware(['auth','verified'])->name('birth-chart');
-Route::get('/admin/birth-chart', [\App\Http\Controllers\BirthChartController::class,'admin'])->middleware(['auth','verified','role:admin'])->name('admin.birth-chart');
-Route::put('/admin/birth-chart/{template}', [\App\Http\Controllers\BirthChartController::class,'update'])->whereNumber('template')->middleware(['auth','verified','role:admin'])->name('admin.birth-chart.update');
+Route::get('/admin/birth-chart', [\App\Http\Controllers\BirthChartController::class,'admin'])->middleware(['auth','verified','staff:content'])->name('admin.birth-chart');
+Route::put('/admin/birth-chart/{template}', [\App\Http\Controllers\BirthChartController::class,'update'])->whereNumber('template')->middleware(['auth','verified','staff:content'])->name('admin.birth-chart.update');
 Route::get('/forecast', [\App\Http\Controllers\MoonoscopeController::class,'index'])->name('forecast');
 Route::middleware(['auth','verified'])->group(function () {
     Route::get('/support', [\App\Http\Controllers\SupportInboxController::class,'index'])->name('support.index');
@@ -104,16 +104,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/social-links', [\App\Http\Controllers\SocialLinksController::class, 'index'])->name('social-links');
     Route::put('/social-links', [\App\Http\Controllers\SocialLinksController::class, 'update'])->middleware('throttle:20,1,social-links:')->name('social-links.update');
-    Route::get('/moonoscope', [\App\Http\Controllers\MoonoscopeController::class,'adminIndex'])->name('moonoscope');
-    Route::patch('/moonoscope/settings', [\App\Http\Controllers\MoonoscopeController::class,'settings'])->name('moonoscope.settings');
-    Route::put('/moonoscope/templates', [\App\Http\Controllers\MoonoscopeController::class,'templates'])->name('moonoscope.templates');
-    Route::post('/moonoscope/generate', [\App\Http\Controllers\MoonoscopeController::class,'generate'])->middleware('throttle:3,1,moonoscope:')->name('moonoscope.generate');
-    Route::put('/moonoscope/{day}', [\App\Http\Controllers\MoonoscopeController::class,'save'])->whereNumber('day')->name('moonoscope.save');
     Route::get('/coach-site', [\App\Http\Controllers\CoachSiteController::class, 'index'])->name('coach-site');
     Route::patch('/coach-site', [\App\Http\Controllers\CoachSiteController::class, 'update'])->name('coach-site.update');
-    Route::get('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'index'])->name('tarot');
-    Route::post('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'store'])->name('tarot.store');
-    Route::post('/tarot-cards/{card}', [\App\Http\Controllers\AdminTarotController::class, 'update'])->name('tarot.update');
     Route::get('/', [\App\Http\Controllers\AdminController::class, 'index'])->name('settings');
     Route::post('/account-cleanup/preview', [\App\Http\Controllers\AccountCleanupController::class,'preview'])->middleware('throttle:10,1')->name('cleanup.preview');
     Route::delete('/account-cleanup', [\App\Http\Controllers\AccountCleanupController::class,'destroy'])->middleware('throttle:10,1')->name('cleanup.destroy');
@@ -141,10 +133,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/preferences/music', [\App\Http\Controllers\MusicPreferenceController::class, 'update'])->middleware('throttle:60,1')->name('music.update');
 });
 Route::post('/chat/{chatSession}/report', [\App\Http\Controllers\ReportController::class,'store'])->middleware(['auth','verified','throttle:5,60,chat-report:'])->name('chat.report');
-Route::middleware(['auth','verified','role:admin'])->group(function () {
+Route::middleware(['auth','verified','staff:reports'])->group(function () {
     Route::get('/admin/reports',[\App\Http\Controllers\ReportController::class,'index'])->name('admin.reports');
-    Route::patch('/admin/reports/{report}',[\App\Http\Controllers\ReportController::class,'review'])->whereNumber('report')->name('admin.reports.review');
-    Route::delete('/admin/ip-blocks/{block}',[\App\Http\Controllers\ReportController::class,'unblock'])->whereNumber('block')->name('admin.ip-blocks.delete');
+    Route::patch('/admin/reports/{report}',[\App\Http\Controllers\ReportController::class,'review'])->whereNumber('report')->middleware('role:admin')->name('admin.reports.review');
+    Route::delete('/admin/ip-blocks/{block}',[\App\Http\Controllers\ReportController::class,'unblock'])->whereNumber('block')->middleware('role:admin')->name('admin.ip-blocks.delete');
 });
 
 Route::post('/payment-webhooks/paymongo', [\App\Http\Controllers\CreditPurchaseController::class,'webhook'])->middleware('throttle:120,1')->name('payments.webhook');
@@ -160,4 +152,24 @@ Route::middleware(['auth','verified'])->group(function () {
     Route::get('/privacy-requests',[\App\Http\Controllers\PrivacyController::class,'index'])->name('privacy.requests');
     Route::post('/privacy-requests',[\App\Http\Controllers\PrivacyController::class,'store'])->middleware('throttle:5,60')->name('privacy.requests.store');
     Route::post('/privacy-requests/{privacyRequest}/review',[\App\Http\Controllers\PrivacyController::class,'review'])->middleware('role:admin')->name('privacy.requests.review');
+});
+Route::middleware(['auth','verified','staff:content'])->prefix('admin')->name('admin.')->group(function(){
+    Route::get('/moonoscope', [\App\Http\Controllers\MoonoscopeController::class,'adminIndex'])->name('moonoscope');
+    Route::patch('/moonoscope/settings', [\App\Http\Controllers\MoonoscopeController::class,'settings'])->name('moonoscope.settings');
+    Route::put('/moonoscope/templates', [\App\Http\Controllers\MoonoscopeController::class,'templates'])->name('moonoscope.templates');
+    Route::post('/moonoscope/generate', [\App\Http\Controllers\MoonoscopeController::class,'generate'])->middleware('throttle:3,1,moonoscope:')->name('moonoscope.generate');
+    Route::put('/moonoscope/{day}', [\App\Http\Controllers\MoonoscopeController::class,'save'])->whereNumber('day')->name('moonoscope.save');
+    Route::get('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'index'])->name('tarot');
+    Route::post('/tarot-cards', [\App\Http\Controllers\AdminTarotController::class, 'store'])->name('tarot.store');
+    Route::post('/tarot-cards/{card}', [\App\Http\Controllers\AdminTarotController::class, 'update'])->name('tarot.update');
+});
+Route::middleware(['auth','verified'])->prefix('staff')->name('staff.')->group(function(){
+ Route::get('/',[\App\Http\Controllers\StaffController::class,'home'])->name('home');
+ Route::get('/schedule',[\App\Http\Controllers\StaffController::class,'schedule'])->middleware('staff:schedule')->name('schedule');
+ Route::get('/health',[\App\Http\Controllers\StaffController::class,'health'])->middleware('staff:health')->name('health');
+ Route::post('/reports/{report}/recommend',[\App\Http\Controllers\ReportWorkflowController::class,'recommend'])->middleware('staff:reports')->name('reports.recommend');
+ Route::post('/reports/{report}/manager',[\App\Http\Controllers\ReportWorkflowController::class,'manager'])->middleware('staff:reports')->name('reports.manager');
+ Route::post('/privacy/{privacyRequest}/review',[\App\Http\Controllers\StaffController::class,'privacy'])->middleware('staff:privacy')->name('privacy.review');
+ Route::get('/emails',[\App\Http\Controllers\StaffEmailController::class,'index'])->middleware('staff:email')->name('emails');
+ Route::post('/emails',[\App\Http\Controllers\StaffEmailController::class,'send'])->middleware(['staff:email','throttle:5,1,staff-email:'])->name('emails.send');
 });
